@@ -13,7 +13,7 @@ import (
 
 const (
 	// OAuth endpoints
-	oauthHost     = "github.com"
+	oauthHost     = "https://github.com"
 	oauthTokenURL = "https://github.com/login/oauth/access_token"
 )
 
@@ -31,25 +31,31 @@ func NewManager(cfg *config.Config) *Manager {
 
 // Login performs GitHub OAuth login
 func (m *Manager) Login(ctx context.Context) error {
-	flow := &oauth.Flow{
-		Host:     oauth.GitHubHost("github.com"),
-		ClientID: os.Getenv("GITHUB_CLIENT_ID"),
-		Scopes:   []string{"repo", "read:org"},
+	clientID := os.Getenv("GITHUB_CLIENT_ID")
+	if clientID == "" {
+		return fmt.Errorf("GITHUB_CLIENT_ID environment variable is not set")
 	}
 
-	accessToken, err := flow.DetectFlow()
+	flow := &oauth.Flow{
+		Host:         oauth.GitHubHost(oauthHost),
+		ClientID:     clientID,
+		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		Scopes:      []string{"repo", "read:org"},
+	}
+
+	token, err := flow.DetectFlow()
 	if err != nil {
 		return fmt.Errorf("failed to perform OAuth flow: %w", err)
 	}
 
 	// Verify token
-	if err := m.verifyToken(accessToken.Token); err != nil {
+	if err := m.verifyToken(token.Token); err != nil {
 		return fmt.Errorf("failed to verify token: %w", err)
 	}
 
 	// Save token
-	m.cfg.Auth.Token = accessToken.Token
-	if err := m.cfg.Save(""); err != nil {
+	m.cfg.Auth.Token = token.Token
+	if err := m.cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save token: %w", err)
 	}
 
@@ -59,8 +65,8 @@ func (m *Manager) Login(ctx context.Context) error {
 // Logout removes stored credentials
 func (m *Manager) Logout() error {
 	m.cfg.Auth.Token = ""
-	if err := m.cfg.Save(""); err != nil {
-		return fmt.Errorf("failed to remove token: %w", err)
+	if err := m.cfg.Save(); err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
 	}
 	return nil
 }
@@ -71,7 +77,9 @@ func (m *Manager) verifyToken(token string) error {
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Authorization", "token "+token)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

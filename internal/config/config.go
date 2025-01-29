@@ -50,17 +50,16 @@ func Load(path string) (*Config, error) {
 }
 
 // Save saves the configuration to file
-func (c *Config) Save(path string) error {
-	if path == "" {
-		configDir, err := os.UserConfigDir()
-		if err != nil {
-			return fmt.Errorf("failed to get config directory: %w", err)
-		}
-		path = filepath.Join(configDir, "osp", "config.yml")
+func (c *Config) Save() error {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
 	}
 
+	path := filepath.Join(configDir, "osp", "config.yml")
+
 	// Create config directory if it doesn't exist
-	configDir := filepath.Dir(path)
+	configDir = filepath.Dir(path)
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}

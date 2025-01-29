@@ -47,7 +47,7 @@ func (m *Manager) Add(ctx context.Context, repoName string) error {
 
 	// Add to config
 	m.cfg.Repositories = append(m.cfg.Repositories, repo.FullName)
-	if err := m.cfg.Save(""); err != nil {
+	if err := m.cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -70,7 +70,7 @@ func (m *Manager) Remove(repoName string) error {
 	}
 
 	// Save config
-	if err := m.cfg.Save(""); err != nil {
+	if err := m.cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -98,7 +98,7 @@ func (m *Manager) Switch(repoName string) error {
 
 	// Update current
 	m.cfg.Current = repoName
-	if err := m.cfg.Save(""); err != nil {
+	if err := m.cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -125,9 +125,12 @@ func (m *Manager) getRepository(ctx context.Context, repoName string) (*Reposito
 		return nil, err
 	}
 
-	if m.cfg.Auth.Token != "" {
-		req.Header.Set("Authorization", "token "+m.cfg.Auth.Token)
+	// Add auth header if token exists
+	if token := m.cfg.Auth.Token; token != "" {
+		req.Header.Set("Authorization", "token "+token)
 	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := m.client.Do(req)
 	if err != nil {
