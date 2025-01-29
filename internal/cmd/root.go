@@ -24,10 +24,12 @@ func init() {
 	// Add commands
 	rootCmd.AddCommand(authCmd)
 	rootCmd.AddCommand(addCmd)
+	rootCmd.AddCommand(removeCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(switchCmd)
+	rootCmd.AddCommand(currentCmd)
 	rootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(starCmd)
 	rootCmd.AddCommand(planCmd)
 	rootCmd.AddCommand(taskCmd)
-	rootCmd.AddCommand(activityCmd)
-	rootCmd.AddCommand(starCmd)
 }

@@ -1,122 +1,80 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the main configuration structure
+// Config represents the application configuration
 type Config struct {
-	Version string       `yaml:"version"`
-	Debug   bool         `yaml:"debug"`
-	Quiet   bool         `yaml:"quiet"`
-	Auth    AuthConfig   `yaml:"auth"`
-	Repos   []RepoConfig `yaml:"repos"`
-	Current string       `yaml:"current_repo"`
-	Default Defaults     `yaml:"defaults"`
-	Custom  Custom       `yaml:"custom"`
+	Auth struct {
+		Token string `yaml:"token"`
+	} `yaml:"auth"`
+	Current      string   `yaml:"current"`
+	Repositories []string `yaml:"repositories"`
 }
 
-// AuthConfig holds authentication related configuration
-type AuthConfig struct {
-	Token   string `yaml:"token"`
-	Host    string `yaml:"host"`
-	Keyring bool   `yaml:"keyring"`
-}
-
-// RepoConfig holds repository specific configuration
-type RepoConfig struct {
-	Name   string                 `yaml:"name"`
-	Alias  string                 `yaml:"alias"`
-	Path   string                 `yaml:"path"`
-	Config map[string]interface{} `yaml:"config"`
-}
-
-// Defaults holds default configuration values
-type Defaults struct {
-	Period    string `yaml:"period"`
-	Format    string `yaml:"format"`
-	AutoSync  bool   `yaml:"auto_sync"`
-	CacheTTL  string `yaml:"cache_ttl"`
-}
-
-// Custom holds custom configuration values
-type Custom struct {
-	TemplatesDir string `yaml:"templates_dir"`
-	ReportsDir   string `yaml:"reports_dir"`
-}
-
-// Load loads configuration from file
+// Load loads the configuration from file
 func Load(path string) (*Config, error) {
 	if path == "" {
-		home, err := os.UserHomeDir()
+		configDir, err := os.UserConfigDir()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get config directory: %w", err)
 		}
-		path = filepath.Join(home, ".config", "osp", "config.yml")
+		path = filepath.Join(configDir, "osp", "config.yml")
 	}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return DefaultConfig(), nil
+	// Create config directory if it doesn't exist
+	configDir := filepath.Dir(path)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Load config file
+	cfg := &Config{}
+	if _, err := os.Stat(path); err == nil {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
-		return nil, err
+
+		if err := yaml.Unmarshal(data, cfg); err != nil {
+			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		}
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	return cfg, nil
 }
 
-// Save saves configuration to file
+// Save saves the configuration to file
 func (c *Config) Save(path string) error {
 	if path == "" {
-		home, err := os.UserHomeDir()
+		configDir, err := os.UserConfigDir()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get config directory: %w", err)
 		}
-		path = filepath.Join(home, ".config", "osp", "config.yml")
+		path = filepath.Join(configDir, "osp", "config.yml")
 	}
 
-	// Ensure directory exists
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+	// Create config directory if it doesn't exist
+	configDir := filepath.Dir(path)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	// Marshal config to YAML
 	data, err := yaml.Marshal(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0600)
-}
-
-// DefaultConfig returns default configuration
-func DefaultConfig() *Config {
-	return &Config{
-		Version: "1.0",
-		Debug:   false,
-		Quiet:   false,
-		Auth: AuthConfig{
-			Host:    "github.com",
-			Keyring: true,
-		},
-		Default: Defaults{
-			Period:    "7d",
-			Format:    "markdown",
-			AutoSync:  true,
-			CacheTTL:  "24h",
-		},
-		Custom: Custom{
-			TemplatesDir: "${HOME}/.config/osp/templates",
-			ReportsDir:   "${HOME}/.config/osp/reports",
-		},
+	// Write config file
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
 	}
+
+	return nil
 }

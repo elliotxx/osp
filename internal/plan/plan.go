@@ -119,18 +119,18 @@ func (m *Manager) getMilestones(ctx context.Context, repoName string) ([]Milesto
 	}
 
 	result := make([]Milestone, 0, len(milestones))
-	for _, m := range milestones {
+	for _, milestone := range milestones {
 		// Get issues for this milestone
-		issues, err := m.getIssues(ctx, repoName, m.Number)
+		issues, err := m.getIssues(ctx, repoName, milestone.Number)
 		if err != nil {
 			return nil, err
 		}
 
 		result = append(result, Milestone{
-			Title:       m.Title,
-			Description: m.Description,
-			DueDate:     m.DueOn,
-			State:       m.State,
+			Title:       milestone.Title,
+			Description: milestone.Description,
+			DueDate:     milestone.DueOn,
+			State:       milestone.State,
 			Issues:      issues,
 		})
 	}

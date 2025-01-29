@@ -9,7 +9,7 @@ import (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add <owner/repo>",
+	Use:   "add [owner/repo]",
 	Short: "Add a repository to manage",
 	Long:  `Add a GitHub repository to manage.`,
 	Args:  cobra.ExactArgs(1),
@@ -21,16 +21,16 @@ var addCmd = &cobra.Command{
 
 		repoManager := repo.NewManager(cfg)
 		if err := repoManager.Add(cmd.Context(), args[0]); err != nil {
-			return fmt.Errorf("failed to add repository: %w", err)
+			return err
 		}
 
-		fmt.Printf("✓ Successfully added repository %s\n", args[0])
+		fmt.Printf("✓ Added repository %s\n", args[0])
 		return nil
 	},
 }
 
 var removeCmd = &cobra.Command{
-	Use:   "remove <owner/repo>",
+	Use:   "remove [owner/repo]",
 	Short: "Remove a repository from management",
 	Long:  `Remove a GitHub repository from management.`,
 	Args:  cobra.ExactArgs(1),
@@ -42,10 +42,10 @@ var removeCmd = &cobra.Command{
 
 		repoManager := repo.NewManager(cfg)
 		if err := repoManager.Remove(args[0]); err != nil {
-			return fmt.Errorf("failed to remove repository: %w", err)
+			return err
 		}
 
-		fmt.Printf("✓ Successfully removed repository %s\n", args[0])
+		fmt.Printf("✓ Removed repository %s\n", args[0])
 		return nil
 	},
 }
@@ -62,31 +62,27 @@ var listCmd = &cobra.Command{
 
 		repoManager := repo.NewManager(cfg)
 		repos := repoManager.List()
-		current := repoManager.Current()
 
 		if len(repos) == 0 {
-			fmt.Println("No repositories are being managed.")
+			fmt.Println("No repositories found.")
 			return nil
 		}
 
 		fmt.Println("Managed repositories:")
 		for _, r := range repos {
-			prefix := "  "
-			if r.Name == current {
-				prefix = "* "
+			if r == cfg.Current {
+				fmt.Printf("* %s\n", r)
+			} else {
+				fmt.Printf("  %s\n", r)
 			}
-			fmt.Printf("%s%s", prefix, r.Name)
-			if r.Alias != "" {
-				fmt.Printf(" (%s)", r.Alias)
-			}
-			fmt.Println()
 		}
+
 		return nil
 	},
 }
 
 var switchCmd = &cobra.Command{
-	Use:   "switch <owner/repo>",
+	Use:   "switch [owner/repo]",
 	Short: "Switch current repository",
 	Long:  `Switch the current repository being managed.`,
 	Args:  cobra.ExactArgs(1),
@@ -98,7 +94,7 @@ var switchCmd = &cobra.Command{
 
 		repoManager := repo.NewManager(cfg)
 		if err := repoManager.Switch(args[0]); err != nil {
-			return fmt.Errorf("failed to switch repository: %w", err)
+			return err
 		}
 
 		fmt.Printf("✓ Switched to repository %s\n", args[0])
@@ -120,7 +116,7 @@ var currentCmd = &cobra.Command{
 		current := repoManager.Current()
 
 		if current == "" {
-			fmt.Println("No repository is currently selected.")
+			fmt.Println("No repository selected.")
 			return nil
 		}
 

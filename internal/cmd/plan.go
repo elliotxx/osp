@@ -32,7 +32,6 @@ var planCmd = &cobra.Command{
 		// Get flags
 		update, _ := cmd.Flags().GetBool("update")
 		format, _ := cmd.Flags().GetString("format")
-		auto, _ := cmd.Flags().GetBool("auto")
 
 		planManager := plan.NewManager(cfg)
 
@@ -118,5 +117,4 @@ var planCmd = &cobra.Command{
 func init() {
 	planCmd.Flags().Bool("update", false, "Update existing plan")
 	planCmd.Flags().String("format", "text", "Output format (text, json, markdown)")
-	planCmd.Flags().Bool("auto", false, "Auto-generate suggestions")
 }

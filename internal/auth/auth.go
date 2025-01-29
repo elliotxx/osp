@@ -32,23 +32,23 @@ func NewManager(cfg *config.Config) *Manager {
 // Login performs GitHub OAuth login
 func (m *Manager) Login(ctx context.Context) error {
 	flow := &oauth.Flow{
-		Host:     oauthHost,
+		Host:     oauth.GitHubHost("github.com"),
 		ClientID: os.Getenv("GITHUB_CLIENT_ID"),
 		Scopes:   []string{"repo", "read:org"},
 	}
 
-	token, err := flow.DetectFlow(ctx)
+	accessToken, err := flow.DetectFlow()
 	if err != nil {
 		return fmt.Errorf("failed to perform OAuth flow: %w", err)
 	}
 
 	// Verify token
-	if err := m.verifyToken(token); err != nil {
+	if err := m.verifyToken(accessToken.Token); err != nil {
 		return fmt.Errorf("failed to verify token: %w", err)
 	}
 
 	// Save token
-	m.cfg.Auth.Token = token
+	m.cfg.Auth.Token = accessToken.Token
 	if err := m.cfg.Save(""); err != nil {
 		return fmt.Errorf("failed to save token: %w", err)
 	}
