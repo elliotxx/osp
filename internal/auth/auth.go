@@ -2,19 +2,11 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
 
-	"github.com/cli/oauth"
+	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/elliotxx/osp/internal/config"
-)
-
-const (
-	// OAuth endpoints
-	oauthHost     = "https://github.com"
-	oauthTokenURL = "https://github.com/login/oauth/access_token"
 )
 
 // Manager handles GitHub authentication
@@ -31,34 +23,24 @@ func NewManager(cfg *config.Config) *Manager {
 
 // Login performs GitHub OAuth login
 func (m *Manager) Login(ctx context.Context) error {
-	clientID := os.Getenv("GITHUB_CLIENT_ID")
-	if clientID == "" {
-		return fmt.Errorf("GITHUB_CLIENT_ID environment variable is not set")
-	}
-
-	flow := &oauth.Flow{
-		Host:         oauth.GitHubHost(oauthHost),
-		ClientID:     clientID,
-		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		Scopes:      []string{"repo", "read:org"},
-	}
-
-	token, err := flow.DetectFlow()
-	if err != nil {
-		return fmt.Errorf("failed to perform OAuth flow: %w", err)
+	// Get token from GitHub CLI
+	token, source := auth.TokenForHost("github.com")
+	if token == "" {
+		return fmt.Errorf("no authentication token found, please run 'gh auth login' first")
 	}
 
 	// Verify token
-	if err := m.verifyToken(token.Token); err != nil {
+	if err := m.verifyToken(token); err != nil {
 		return fmt.Errorf("failed to verify token: %w", err)
 	}
 
 	// Save token
-	m.cfg.Auth.Token = token.Token
+	m.cfg.Auth.Token = token
 	if err := m.cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save token: %w", err)
 	}
 
+	fmt.Printf("✓ Authenticated via %s\n", source)
 	return nil
 }
 
@@ -73,28 +55,18 @@ func (m *Manager) Logout() error {
 
 // verifyToken verifies the GitHub token
 func (m *Manager) verifyToken(token string) error {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	client, err := api.NewRESTClient(api.ClientOptions{
+		AuthToken: token,
+		Host:      "github.com",
+	})
 	if err != nil {
 		return err
-	}
-
-	req.Header.Set("Authorization", "token "+token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
 	var response struct {
 		Login string `json:"login"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := client.Get("user", &response); err != nil {
 		return err
 	}
 
@@ -103,10 +75,12 @@ func (m *Manager) verifyToken(token string) error {
 
 // GetToken returns the stored GitHub token
 func (m *Manager) GetToken() string {
-	return m.cfg.Auth.Token
+	token, _ := auth.TokenForHost("github.com")
+	return token
 }
 
 // HasToken checks if a token is stored
 func (m *Manager) HasToken() bool {
-	return m.cfg.Auth.Token != ""
+	token := m.GetToken()
+	return token != ""
 }

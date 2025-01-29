@@ -2,7 +2,7 @@ include go.mk
 
 # Override the variables in the go.mk
 APPROOT=osp
-GOSOURCE_PATHS = ./pkg/... ./cmd/...
+GOSOURCE_PATHS = ./internal/... ./pkg/...
 LICENSE_CHECKER ?= license-eye
 LICENSE_CHECKER_VERSION ?= main
 
