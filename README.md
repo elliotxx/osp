@@ -27,33 +27,48 @@ go install github.com/elliotxx/osp@latest
 
 ### 基本使用
 
-1. 认证
+1. 登录 GitHub
 ```bash
-osp auth login
+# 使用 GitHub CLI 登录
+gh auth login
+
+# 验证 OSP 认证状态
+osp auth status
 ```
 
-2. 添加仓库
+2. 管理仓库
 ```bash
-osp add owner/repo
+# 添加仓库
+osp repo add owner/repo
+
+# 切换仓库
+osp repo switch owner/repo
+
+# 查看当前仓库
+osp repo current
 ```
 
-3. 查看项目统计
+3. 生成规划
 ```bash
-osp stats
+# 基于里程碑生成规划
+osp plan <milestone-number>
+
+# 使用自定义标签和分类
+osp plan <milestone-number> --label planning --categories bug,documentation,enhancement
 ```
 
 更多使用说明请参考 [使用文档](docs/usage/README.md)。
 
 ## 文档
 
-- [设计文档](docs/design/README.md)
-- [使用文档](docs/usage/README.md)
-- [API 文档](docs/api/README.md)
+- [使用文档](docs/usage/README.md) - 安装和使用指南
+- [设计文档](docs/design/README.md) - 架构和实现细节
+- [API 文档](docs/api/README.md) - API 参考
 
-## 贡献指南
+## 贡献
 
-欢迎贡献代码！请查看我们的 [贡献指南](CONTRIBUTING.md)。
+欢迎贡献代码和提出建议！请参考我们的[贡献指南](CONTRIBUTING.md)。
 
 ## 许可证
 
-[MIT License](LICENSE)
+本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。

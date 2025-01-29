@@ -1,158 +1,115 @@
 # OSP 配置管理设计
 
-## 配置文件结构
+## 配置文件
 
-### 主配置文件
-位置：`~/.config/osp/config.yml`
+### 位置
+
+OSP 的配置文件存储在以下位置：
+
+- macOS: `~/Library/Application Support/osp/config.yml`
+- Linux: `~/.config/osp/config.yml`
+- Windows: `%AppData%\osp\config.yml`
+
+### 结构
+
+配置文件使用 YAML 格式，主要包含以下部分：
 
 ```yaml
-# 基础配置
-version: "1.0"
-debug: false
-quiet: false
-
 # 认证配置
 auth:
-  token: "xxx"           # GitHub token
-  host: "github.com"     # GitHub host
-  keyring: true         # 是否使用系统 keyring
+  token: ""  # GitHub 令牌，由 GitHub CLI 提供
 
-# 仓库管理
-repos:
-  - name: "cli/cli"      # 仓库全名
-    alias: "gh-cli"      # 别名
-    path: "/local/path"  # 本地路径
-    config:              # 仓库特定配置
-      auto_sync: true
-      sync_interval: "1h"
-  
-  - name: "org/repo"
-    alias: "myrepo"
-    config:
-      auto_sync: false
+# 当前仓库
+current: ""  # 当前选中的仓库
 
-# 当前选择的仓库
-current_repo: "cli/cli"
-
-# 默认设置
-defaults:
-  period: "7d"          # 默认时间周期
-  format: "markdown"    # 默认输出格式
-  auto_sync: true      # 默认是否自动同步
-  cache_ttl: "24h"     # 缓存过期时间
-
-# 自定义配置
-custom:
-  templates_dir: "~/.config/osp/templates"
-  reports_dir: "~/.config/osp/reports"
+# 仓库列表
+repositories:  # 管理的仓库列表
+  - owner/repo1
+  - owner/repo2
 ```
 
-## 数据存储结构
+## 配置管理
 
-```
-~/.config/osp/
-  ├── config.yml          # 主配置文件
-  ├── auth/              # 认证信息
-  │   └── credentials    # 凭证文件
-  ├── cache/            # 数据缓存
-  │   ├── cli/cli/      # 按仓库组织缓存
-  │   │   ├── stats/
-  │   │   ├── stars/
-  │   │   └── activities/
-  │   └── org/repo/
-  ├── templates/        # 模板文件
-  │   ├── report/
-  │   ├── plan/
-  │   └── task/
-  └── reports/         # 生成的报告
-      ├── daily/
-      ├── weekly/
-      └── monthly/
-```
+### 配置加载
 
-## 配置管理机制
+1. 配置初始化
+   - 检查配置目录是否存在
+   - 创建默认配置文件
 
-### 配置优先级
-1. 命令行参数
-2. 环境变量
-3. 仓库特定配置
-4. 用户配置文件
-5. 默认配置
+2. 配置读取
+   - 读取 YAML 文件
+   - 解析配置项
 
-### 环境变量支持
-- `OSP_TOKEN`: GitHub token
-- `OSP_CONFIG`: 配置文件路径
-- `OSP_DEBUG`: 调试模式
-- `OSP_QUIET`: 静默模式
-- `OSP_FORMAT`: 输出格式
+3. 配置验证
+   - 验证必要字段
+   - 检查字段格式
 
-### 配置验证
-1. 启动时验证配置文件格式
-2. 验证必要字段
-3. 类型检查
-4. 值范围检查
+### 配置更新
 
-### 配置热重载
-- 支持运行时重载配置
-- 监听配置文件变化
-- 平滑重载不影响运行中的命令
+1. 仓库管理
+   - 添加/移除仓库
+   - 更新当前仓库
 
-## 安全考虑
+2. 配置保存
+   - 序列化为 YAML
+   - 写入文件
 
-### 敏感信息处理
-1. token 优先使用系统 keyring
-2. 配置文件权限设置为 600
-3. 敏感信息不写入日志
+## 实现细节
 
-### 加密存储
-- 使用系统 keyring 存储认证信息
-- 支持自定义加密方案
-- 加密密钥轮换机制
+### 配置结构体
 
-## 缓存策略
-
-### 缓存配置
-```yaml
-cache:
-  enabled: true
-  ttl: "24h"
-  max_size: "1GB"
-  cleanup_interval: "1h"
+```go
+// Config represents the application configuration
+type Config struct {
+    Auth struct {
+        Token string `yaml:"token"`
+    } `yaml:"auth"`
+    Current      string   `yaml:"current"`
+    Repositories []string `yaml:"repositories"`
+}
 ```
 
-### 缓存类型
-1. API 响应缓存
-2. 统计数据缓存
-3. 报告缓存
+### 配置操作
 
-### 缓存清理
-- 定期清理过期缓存
-- 超出大小限制时清理
-- 支持手动清理
-
-## 模板系统
-
-### 模板位置
-```
-templates/
-  ├── report/
-  │   ├── daily.md
-  │   ├── weekly.md
-  │   └── monthly.md
-  ├── plan/
-  │   ├── roadmap.md
-  │   └── milestone.md
-  └── task/
-      ├── good-first-issue.md
-      └── help-wanted.md
+1. 加载配置
+```go
+func Load(path string) (*Config, error)
 ```
 
-### 模板变量
-- 支持项目信息变量
-- 支持统计数据变量
-- 支持自定义变量
+2. 保存配置
+```go
+func (c *Config) Save() error
+```
 
-### 自定义模板
-- 支持用户自定义模板
-- 模板继承机制
-- 模板验证
+### 错误处理
+
+1. 文件操作错误
+   - 文件不存在
+   - 权限不足
+   - IO 错误
+
+2. 解析错误
+   - YAML 格式错误
+   - 字段类型错误
+
+3. 验证错误
+   - 必要字段缺失
+   - 字段格式错误
+
+## 最佳实践
+
+1. 配置验证
+   - 在加载时验证配置
+   - 在修改时验证更改
+
+2. 错误恢复
+   - 保持配置文件备份
+   - 支持重置为默认值
+
+3. 安全性
+   - 敏感信息使用系统 keyring
+   - 配置文件权限控制
+
+4. 兼容性
+   - 支持配置版本升级
+   - 保持向后兼容
