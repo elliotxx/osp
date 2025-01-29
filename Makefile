@@ -72,7 +72,7 @@ build-darwin: ## Build for MacOS (Darwin)
 	@echo "🚀 Building osp for darwin platform ..."
 	GOOS=darwin GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \
 		$(GO) build -o ./_build/darwin/$(APPROOT) \
-		./cmd/osp
+		.
 
 # Target: build-linux
 # Description: Builds for Linux platform.
@@ -87,7 +87,7 @@ build-linux: ## Build for Linux
 	@echo "🚀 Building osp for linux platform ..."
 	GOOS=linux GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \
 		$(GO) build -o ./_build/linux/$(APPROOT) \
-		./cmd/osp
+		.
 
 # Target: build-windows
 # Description: Builds for Windows platform.
@@ -102,7 +102,7 @@ build-windows: ## Build for Windows
 	@echo "🚀 Building osp for windows platform ..."
 	GOOS=windows GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \
 		$(GO) build -o ./_build/windows/$(APPROOT).exe \
-		./cmd/osp
+		.
 
 .PHONY: gen-cli-doc
 gen-cli-doc: ## Generate CLI Documentation

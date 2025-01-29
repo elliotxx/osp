@@ -9,15 +9,15 @@ import (
 )
 
 var authCmd = &cobra.Command{
-	Use:   "auth <command>",
+	Use:   "auth",
 	Short: "Manage GitHub authentication",
-	Long:  `Manage GitHub authentication and credentials.`,
+	Long:  `Manage GitHub authentication, including login and logout.`,
 }
 
 var authLoginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Log in to GitHub",
-	Long:  `Log in to GitHub using OAuth or a personal access token.`,
+	Short: "Login to GitHub",
+	Long:  `Login to GitHub using OAuth authentication.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -26,18 +26,18 @@ var authLoginCmd = &cobra.Command{
 
 		authManager := auth.NewManager(cfg)
 		if err := authManager.Login(cmd.Context()); err != nil {
-			return fmt.Errorf("login failed: %w", err)
+			return fmt.Errorf("failed to login: %w", err)
 		}
 
-		fmt.Println("✓ Successfully logged in to GitHub")
+		fmt.Println("✓ Successfully logged in")
 		return nil
 	},
 }
 
 var authLogoutCmd = &cobra.Command{
 	Use:   "logout",
-	Short: "Log out of GitHub",
-	Long:  `Log out of GitHub and remove stored credentials.`,
+	Short: "Logout from GitHub",
+	Long:  `Logout from GitHub and remove stored credentials.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -46,10 +46,10 @@ var authLogoutCmd = &cobra.Command{
 
 		authManager := auth.NewManager(cfg)
 		if err := authManager.Logout(); err != nil {
-			return fmt.Errorf("logout failed: %w", err)
+			return fmt.Errorf("failed to logout: %w", err)
 		}
 
-		fmt.Println("✓ Successfully logged out of GitHub")
+		fmt.Println("✓ Successfully logged out")
 		return nil
 	},
 }
@@ -57,7 +57,7 @@ var authLogoutCmd = &cobra.Command{
 var authStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show authentication status",
-	Long:  `Display the current authentication status and token information.`,
+	Long:  `Show current GitHub authentication status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -65,17 +65,18 @@ var authStatusCmd = &cobra.Command{
 		}
 
 		authManager := auth.NewManager(cfg)
-		if !authManager.HasToken() {
-			fmt.Println("× Not logged in to GitHub")
-			return nil
+		if authManager.HasToken() {
+			fmt.Println("✓ Logged in to GitHub")
+		} else {
+			fmt.Println("✗ Not logged in to GitHub")
 		}
 
-		fmt.Println("✓ Logged in to GitHub")
 		return nil
 	},
 }
 
 func init() {
+	rootCmd.AddCommand(authCmd)
 	authCmd.AddCommand(authLoginCmd)
 	authCmd.AddCommand(authLogoutCmd)
 	authCmd.AddCommand(authStatusCmd)

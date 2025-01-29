@@ -11,9 +11,15 @@ import (
 )
 
 var taskCmd = &cobra.Command{
-	Use:   "task [owner/repo]",
-	Short: "Manage community tasks",
-	Long:  `List and generate community tasks (issues) for the repository.`,
+	Use:   "task",
+	Short: "Task management",
+	Long:  `Manage community tasks, including generating and listing tasks.`,
+}
+
+var taskGenerateCmd = &cobra.Command{
+	Use:   "generate [owner/repo]",
+	Short: "Generate tasks",
+	Long:  `Generate tasks based on repository analysis.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -30,22 +36,68 @@ var taskCmd = &cobra.Command{
 		}
 
 		// Get flags
-		taskType, _ := cmd.Flags().GetString("type")
 		format, _ := cmd.Flags().GetString("format")
-		auto, _ := cmd.Flags().GetBool("auto")
+		category, _ := cmd.Flags().GetString("category")
 
 		taskManager := task.NewManager(cfg)
-
-		if auto {
-			if err := taskManager.Generate(cmd.Context(), repoName, taskType); err != nil {
-				return fmt.Errorf("failed to generate tasks: %w", err)
-			}
-			fmt.Println("✓ Successfully generated new tasks")
-			return nil
+		tasks, err := taskManager.Generate(cmd.Context(), repoName, category)
+		if err != nil {
+			return fmt.Errorf("failed to generate tasks: %w", err)
 		}
 
-		// List tasks
-		tasks, err := taskManager.List(cmd.Context(), repoName, taskType)
+		// Output tasks
+		switch strings.ToLower(format) {
+		case "json":
+			data, err := json.MarshalIndent(tasks, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data))
+
+		default:
+			fmt.Printf("Generated Tasks for %s:\n\n", repoName)
+			for _, t := range tasks {
+				fmt.Printf("Title: %s\n", t.Title)
+				fmt.Printf("Category: %s\n", t.Category)
+				fmt.Printf("Priority: %s\n", t.Priority)
+				fmt.Printf("Estimated Time: %s\n", t.EstimatedTime)
+				if t.Description != "" {
+					fmt.Printf("\nDescription:\n%s\n", t.Description)
+				}
+				fmt.Println()
+			}
+		}
+
+		return nil
+	},
+}
+
+var taskListCmd = &cobra.Command{
+	Use:   "list [owner/repo]",
+	Short: "List tasks",
+	Long:  `List all tasks for a repository.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load("")
+		if err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
+		}
+
+		// Get repository name
+		repoName := cfg.Current
+		if len(args) > 0 {
+			repoName = args[0]
+		}
+		if repoName == "" {
+			return fmt.Errorf("no repository specified and no current repository set")
+		}
+
+		// Get flags
+		format, _ := cmd.Flags().GetString("format")
+		status, _ := cmd.Flags().GetString("status")
+		category, _ := cmd.Flags().GetString("category")
+
+		taskManager := task.NewManager(cfg)
+		tasks, err := taskManager.List(cmd.Context(), repoName, status, category)
 		if err != nil {
 			return fmt.Errorf("failed to list tasks: %w", err)
 		}
@@ -59,61 +111,21 @@ var taskCmd = &cobra.Command{
 			}
 			fmt.Println(string(data))
 
-		case "markdown", "md":
-			fmt.Printf("# Tasks for %s\n\n", repoName)
-			
-			if taskType != "" {
-				fmt.Printf("Type: %s\n\n", taskType)
-			}
-
-			for _, t := range tasks {
-				fmt.Printf("## #%d: %s\n\n", t.Number, t.Title)
-				
-				if t.Body != "" {
-					fmt.Printf("%s\n\n", t.Body)
-				}
-
-				fmt.Printf("- State: %s\n", t.State)
-				fmt.Printf("- Type: %s\n", t.Type)
-				fmt.Printf("- Difficulty: %s\n", t.Difficulty)
-				
-				if len(t.Labels) > 0 {
-					fmt.Printf("- Labels: %s\n", strings.Join(t.Labels, ", "))
-				}
-				
-				if len(t.Assignees) > 0 {
-					fmt.Printf("- Assignees: %s\n", strings.Join(t.Assignees, ", "))
-				}
-				
-				fmt.Printf("- Created: %s\n", t.CreatedAt.Format("2006-01-02"))
-				fmt.Printf("- Updated: %s\n", t.UpdatedAt.Format("2006-01-02"))
-				fmt.Println()
-			}
-
 		default:
-			fmt.Printf("Tasks for %s:\n\n", repoName)
-			
 			if len(tasks) == 0 {
 				fmt.Println("No tasks found.")
 				return nil
 			}
 
+			fmt.Printf("Tasks for %s:\n\n", repoName)
 			for _, t := range tasks {
-				fmt.Printf("#%d: %s\n", t.Number, t.Title)
-				fmt.Printf("  State: %s\n", t.State)
-				fmt.Printf("  Type: %s\n", t.Type)
-				fmt.Printf("  Difficulty: %s\n", t.Difficulty)
-				
-				if len(t.Labels) > 0 {
-					fmt.Printf("  Labels: %s\n", strings.Join(t.Labels, ", "))
+				fmt.Printf("Title: %s\n", t.Title)
+				fmt.Printf("Status: %s\n", t.Status)
+				fmt.Printf("Category: %s\n", t.Category)
+				fmt.Printf("Priority: %s\n", t.Priority)
+				if t.Assignee != "" {
+					fmt.Printf("Assignee: %s\n", t.Assignee)
 				}
-				
-				if len(t.Assignees) > 0 {
-					fmt.Printf("  Assignees: %s\n", strings.Join(t.Assignees, ", "))
-				}
-				
-				fmt.Printf("  Created: %s\n", t.CreatedAt.Format("2006-01-02"))
-				fmt.Printf("  Updated: %s\n", t.UpdatedAt.Format("2006-01-02"))
 				fmt.Println()
 			}
 		}
@@ -123,7 +135,16 @@ var taskCmd = &cobra.Command{
 }
 
 func init() {
-	taskCmd.Flags().String("type", "", "Task type (good-first-issue, help-wanted, bug, enhancement)")
-	taskCmd.Flags().String("format", "text", "Output format (text, json, markdown)")
-	taskCmd.Flags().Bool("auto", false, "Auto-generate new tasks")
+	// Add task commands
+	rootCmd.AddCommand(taskCmd)
+	taskCmd.AddCommand(taskGenerateCmd)
+	taskCmd.AddCommand(taskListCmd)
+
+	// Add flags
+	taskGenerateCmd.Flags().String("format", "text", "Output format (text, json)")
+	taskGenerateCmd.Flags().String("category", "", "Task category filter")
+	
+	taskListCmd.Flags().String("format", "text", "Output format (text, json)")
+	taskListCmd.Flags().String("status", "", "Task status filter")
+	taskListCmd.Flags().String("category", "", "Task category filter")
 }

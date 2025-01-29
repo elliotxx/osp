@@ -11,9 +11,15 @@ import (
 )
 
 var planCmd = &cobra.Command{
-	Use:   "plan [owner/repo]",
-	Short: "Manage project plans",
-	Long:  `Generate and manage project plans based on milestones and issues.`,
+	Use:   "plan",
+	Short: "Project planning",
+	Long:  `Manage project plans, including milestones and issues.`,
+}
+
+var planGenerateCmd = &cobra.Command{
+	Use:   "generate [owner/repo]",
+	Short: "Generate project plan",
+	Long:  `Generate a project plan based on milestones and issues.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -30,18 +36,11 @@ var planCmd = &cobra.Command{
 		}
 
 		// Get flags
-		update, _ := cmd.Flags().GetBool("update")
 		format, _ := cmd.Flags().GetString("format")
+		includeIssues, _ := cmd.Flags().GetBool("include-issues")
 
 		planManager := plan.NewManager(cfg)
-
-		if update {
-			// TODO: Implement plan update logic
-			return fmt.Errorf("plan update not implemented yet")
-		}
-
-		// Generate plan
-		plan, err := planManager.Generate(cmd.Context(), repoName)
+		plan, err := planManager.Generate(cmd.Context(), repoName, includeIssues)
 		if err != nil {
 			return fmt.Errorf("failed to generate plan: %w", err)
 		}
@@ -55,58 +54,80 @@ var planCmd = &cobra.Command{
 			}
 			fmt.Println(string(data))
 
-		case "markdown", "md":
-			fmt.Printf("# %s\n\n", plan.Title)
-			fmt.Printf("%s\n\n", plan.Description)
-			fmt.Printf("Period: %s - %s\n\n", 
-				plan.StartDate.Format("2006-01-02"),
-				plan.EndDate.Format("2006-01-02"))
+		default:
+			fmt.Printf("Project Plan for %s:\n\n", repoName)
+			for _, milestone := range plan.Milestones {
+				fmt.Printf("Milestone: %s\n", milestone.Title)
+				fmt.Printf("Due Date: %s\n", milestone.DueDate)
+				fmt.Printf("Progress: %d%%\n", milestone.Progress)
 
-			fmt.Println("## Milestones\n")
-			for _, m := range plan.Milestones {
-				fmt.Printf("### %s\n", m.Title)
-				fmt.Printf("- Due: %s\n", m.DueDate.Format("2006-01-02"))
-				fmt.Printf("- Status: %s\n", m.State)
-				if m.Description != "" {
-					fmt.Printf("\n%s\n", m.Description)
-				}
-				
-				if len(m.Issues) > 0 {
+				if includeIssues && len(milestone.Issues) > 0 {
 					fmt.Println("\nIssues:")
-					for _, i := range m.Issues {
-						status := "❌"
-						if i.State == "closed" {
-							status = "✓"
+					for _, issue := range milestone.Issues {
+						fmt.Printf("- %s (#%d)\n", issue.Title, issue.Number)
+						fmt.Printf("  Status: %s\n", issue.Status)
+						if issue.Assignee != "" {
+							fmt.Printf("  Assignee: %s\n", issue.Assignee)
 						}
-						fmt.Printf("- [%s] #%d %s\n", status, i.Number, i.Title)
 					}
 				}
 				fmt.Println()
 			}
+		}
+
+		return nil
+	},
+}
+
+var planListCmd = &cobra.Command{
+	Use:   "list [owner/repo]",
+	Short: "List project plans",
+	Long:  `List all project plans.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load("")
+		if err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
+		}
+
+		// Get repository name
+		repoName := cfg.Current
+		if len(args) > 0 {
+			repoName = args[0]
+		}
+		if repoName == "" {
+			return fmt.Errorf("no repository specified and no current repository set")
+		}
+
+		// Get flags
+		format, _ := cmd.Flags().GetString("format")
+
+		planManager := plan.NewManager(cfg)
+		plans, err := planManager.List(cmd.Context(), repoName)
+		if err != nil {
+			return fmt.Errorf("failed to list plans: %w", err)
+		}
+
+		// Output plans
+		switch strings.ToLower(format) {
+		case "json":
+			data, err := json.MarshalIndent(plans, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data))
 
 		default:
-			fmt.Printf("Project Plan: %s\n\n", plan.Title)
-			fmt.Printf("Description: %s\n", plan.Description)
-			fmt.Printf("Period: %s - %s\n\n",
-				plan.StartDate.Format("2006-01-02"),
-				plan.EndDate.Format("2006-01-02"))
+			if len(plans) == 0 {
+				fmt.Println("No plans found.")
+				return nil
+			}
 
-			fmt.Println("Milestones:")
-			for _, m := range plan.Milestones {
-				fmt.Printf("\n- %s\n", m.Title)
-				fmt.Printf("  Due: %s\n", m.DueDate.Format("2006-01-02"))
-				fmt.Printf("  Status: %s\n", m.State)
-				
-				if len(m.Issues) > 0 {
-					fmt.Println("  Issues:")
-					for _, i := range m.Issues {
-						status := "[ ]"
-						if i.State == "closed" {
-							status = "[x]"
-						}
-						fmt.Printf("  - %s #%d %s\n", status, i.Number, i.Title)
-					}
-				}
+			fmt.Printf("Project Plans for %s:\n\n", repoName)
+			for _, p := range plans {
+				fmt.Printf("Plan: %s\n", p.Name)
+				fmt.Printf("Created: %s\n", p.CreatedAt)
+				fmt.Printf("Status: %s\n", p.Status)
+				fmt.Printf("Progress: %d%%\n\n", p.Progress)
 			}
 		}
 
@@ -115,6 +136,13 @@ var planCmd = &cobra.Command{
 }
 
 func init() {
-	planCmd.Flags().Bool("update", false, "Update existing plan")
-	planCmd.Flags().String("format", "text", "Output format (text, json, markdown)")
+	// Add plan commands
+	rootCmd.AddCommand(planCmd)
+	planCmd.AddCommand(planGenerateCmd)
+	planCmd.AddCommand(planListCmd)
+
+	// Add flags
+	planGenerateCmd.Flags().String("format", "text", "Output format (text, json)")
+	planGenerateCmd.Flags().Bool("include-issues", false, "Include issues in the plan")
+	planListCmd.Flags().String("format", "text", "Output format (text, json)")
 }

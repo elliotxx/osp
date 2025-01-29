@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/elliotxx/osp/internal/config"
 	"github.com/elliotxx/osp/internal/stats"
@@ -12,9 +11,15 @@ import (
 )
 
 var statsCmd = &cobra.Command{
-	Use:   "stats [owner/repo]",
+	Use:   "stats",
+	Short: "Repository statistics",
+	Long:  `View and analyze repository statistics.`,
+}
+
+var statsShowCmd = &cobra.Command{
+	Use:   "show [owner/repo]",
 	Short: "Show repository statistics",
-	Long:  `Display statistics for the specified repository or current repository.`,
+	Long:  `Show basic statistics for a repository, including stars, forks, issues, etc.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -34,11 +39,12 @@ var statsCmd = &cobra.Command{
 		format, _ := cmd.Flags().GetString("format")
 
 		statsManager := stats.NewManager(cfg)
-		stats, err := statsManager.GetStats(cmd.Context(), repoName)
+		stats, err := statsManager.Get(cmd.Context(), repoName)
 		if err != nil {
 			return fmt.Errorf("failed to get statistics: %w", err)
 		}
 
+		// Output stats
 		switch strings.ToLower(format) {
 		case "json":
 			data, err := json.MarshalIndent(stats, "", "  ")
@@ -46,13 +52,13 @@ var statsCmd = &cobra.Command{
 				return err
 			}
 			fmt.Println(string(data))
+
 		default:
-			fmt.Printf("Statistics for %s:\n", repoName)
+			fmt.Printf("Statistics for %s:\n\n", repoName)
 			fmt.Printf("Stars:        %d\n", stats.Stars)
 			fmt.Printf("Forks:        %d\n", stats.Forks)
-			fmt.Printf("Issues:       %d\n", stats.Issues)
-			fmt.Printf("Pull Requests: %d\n", stats.PRs)
-			fmt.Printf("Last Updated: %s\n", stats.LastUpdate.Format(time.RFC3339))
+			fmt.Printf("Open Issues:  %d\n", stats.OpenIssues)
+			fmt.Printf("Last Update:  %s\n", stats.LastUpdated)
 		}
 
 		return nil
@@ -62,13 +68,13 @@ var statsCmd = &cobra.Command{
 var starCmd = &cobra.Command{
 	Use:   "star",
 	Short: "Star related commands",
-	Long:  `Commands related to repository stars.`,
+	Long:  `Commands related to repository stars, including history and analysis.`,
 }
 
 var starHistoryCmd = &cobra.Command{
 	Use:   "history [owner/repo]",
 	Short: "Show star history",
-	Long:  `Display star history for the specified repository or current repository.`,
+	Long:  `Show the history of stars for a repository over time.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -84,27 +90,17 @@ var starHistoryCmd = &cobra.Command{
 			return fmt.Errorf("no repository specified and no current repository set")
 		}
 
-		// Get time range
-		from, _ := cmd.Flags().GetString("from")
-		to, _ := cmd.Flags().GetString("to")
+		// Get flags
+		days, _ := cmd.Flags().GetInt("days")
 		format, _ := cmd.Flags().GetString("format")
 
-		fromTime, err := parseTime(from)
-		if err != nil {
-			return fmt.Errorf("invalid from date: %w", err)
-		}
-
-		toTime, err := parseTime(to)
-		if err != nil {
-			return fmt.Errorf("invalid to date: %w", err)
-		}
-
 		statsManager := stats.NewManager(cfg)
-		history, err := statsManager.GetStarHistory(cmd.Context(), repoName, fromTime, toTime)
+		history, err := statsManager.GetStarHistory(cmd.Context(), repoName, days)
 		if err != nil {
 			return fmt.Errorf("failed to get star history: %w", err)
 		}
 
+		// Output history
 		switch strings.ToLower(format) {
 		case "json":
 			data, err := json.MarshalIndent(history, "", "  ")
@@ -112,8 +108,9 @@ var starHistoryCmd = &cobra.Command{
 				return err
 			}
 			fmt.Println(string(data))
+
 		default:
-			fmt.Printf("Star history for %s:\n", repoName)
+			fmt.Printf("Star history for %s (last %d days):\n\n", repoName, days)
 			for _, h := range history {
 				fmt.Printf("%s: %d stars\n", h.Date.Format("2006-01-02"), h.Stars)
 			}
@@ -124,21 +121,16 @@ var starHistoryCmd = &cobra.Command{
 }
 
 func init() {
-	// Stats command flags
-	statsCmd.Flags().String("format", "text", "Output format (text, json)")
+	// Add stats commands
+	rootCmd.AddCommand(statsCmd)
+	statsCmd.AddCommand(statsShowCmd)
 
-	// Star history command flags
-	starHistoryCmd.Flags().String("from", "", "Start date (YYYY-MM-DD)")
-	starHistoryCmd.Flags().String("to", "", "End date (YYYY-MM-DD)")
-	starHistoryCmd.Flags().String("format", "text", "Output format (text, json)")
-
-	// Add star subcommands
+	// Add star commands
+	rootCmd.AddCommand(starCmd)
 	starCmd.AddCommand(starHistoryCmd)
-}
 
-func parseTime(date string) (time.Time, error) {
-	if date == "" {
-		return time.Now(), nil
-	}
-	return time.Parse("2006-01-02", date)
+	// Add flags
+	statsShowCmd.Flags().String("format", "text", "Output format (text, json)")
+	starHistoryCmd.Flags().Int("days", 30, "Number of days to show history for")
+	starHistoryCmd.Flags().String("format", "text", "Output format (text, json)")
 }

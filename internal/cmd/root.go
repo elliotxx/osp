@@ -21,15 +21,5 @@ func init() {
 	rootCmd.PersistentFlags().Bool("quiet", false, "enable quiet mode")
 	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/.config/osp/config.yml)")
 
-	// Add commands
-	rootCmd.AddCommand(authCmd)
-	rootCmd.AddCommand(addCmd)
-	rootCmd.AddCommand(removeCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(switchCmd)
-	rootCmd.AddCommand(currentCmd)
-	rootCmd.AddCommand(statsCmd)
-	rootCmd.AddCommand(starCmd)
-	rootCmd.AddCommand(planCmd)
-	rootCmd.AddCommand(taskCmd)
+	// Commands are added in their respective files
 }

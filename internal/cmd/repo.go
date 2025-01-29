@@ -8,7 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addCmd = &cobra.Command{
+var repoCmd = &cobra.Command{
+	Use:   "repo",
+	Short: "Manage repositories",
+	Long:  `Manage GitHub repositories, including adding, removing, listing, and switching between them.`,
+}
+
+var repoAddCmd = &cobra.Command{
 	Use:   "add [owner/repo]",
 	Short: "Add a repository to manage",
 	Long:  `Add a GitHub repository to manage.`,
@@ -29,7 +35,7 @@ var addCmd = &cobra.Command{
 	},
 }
 
-var removeCmd = &cobra.Command{
+var repoRemoveCmd = &cobra.Command{
 	Use:   "remove [owner/repo]",
 	Short: "Remove a repository from management",
 	Long:  `Remove a GitHub repository from management.`,
@@ -50,10 +56,9 @@ var removeCmd = &cobra.Command{
 	},
 }
 
-var listCmd = &cobra.Command{
+var repoListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List managed repositories",
-	Long:  `List all GitHub repositories being managed.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -81,7 +86,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-var switchCmd = &cobra.Command{
+var repoSwitchCmd = &cobra.Command{
 	Use:   "switch [owner/repo]",
 	Short: "Switch current repository",
 	Long:  `Switch the current repository being managed.`,
@@ -102,10 +107,9 @@ var switchCmd = &cobra.Command{
 	},
 }
 
-var currentCmd = &cobra.Command{
+var repoCurrentCmd = &cobra.Command{
 	Use:   "current",
 	Short: "Show current repository",
-	Long:  `Display the current repository being managed.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -126,9 +130,10 @@ var currentCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
-	rootCmd.AddCommand(removeCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(switchCmd)
-	rootCmd.AddCommand(currentCmd)
+	rootCmd.AddCommand(repoCmd)
+	repoCmd.AddCommand(repoAddCmd)
+	repoCmd.AddCommand(repoRemoveCmd)
+	repoCmd.AddCommand(repoListCmd)
+	repoCmd.AddCommand(repoSwitchCmd)
+	repoCmd.AddCommand(repoCurrentCmd)
 }
