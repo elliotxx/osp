@@ -12,6 +12,7 @@ import (
 
 var (
 	verbose bool
+	noColor bool
 	rootCmd = &cobra.Command{
 		Use:   "osp",
 		Short: "Open Source Project Management Tool",
@@ -19,6 +20,7 @@ var (
 It helps you manage issues, milestones, planning, and more.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			log.SetVerbose(verbose)
+			log.SetNoColor(noColor)
 		},
 	}
 )
@@ -30,16 +32,18 @@ type Repository struct {
 }
 
 // Execute executes the root command
-func Execute() {
+func Execute() error {
 	if err := rootCmd.Execute(); err != nil {
 		log.Error("%v", err)
 		os.Exit(1)
 	}
+	return nil
 }
 
 func init() {
 	// Add global flags
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
 
 	rootCmd.AddCommand(
 		newAuthCmd(),

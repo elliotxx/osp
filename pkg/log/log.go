@@ -69,6 +69,7 @@ import (
 
 var (
 	verbose bool
+	noColor bool // If true, disable color output
 )
 
 // ANSI color codes
@@ -86,6 +87,27 @@ const (
 	// Styles
 	styleBold = "\033[1m"
 )
+
+// getColor returns the color code if color output is enabled, otherwise returns empty string
+func getColor(color string) string {
+	if noColor {
+		return ""
+	}
+	return color
+}
+
+// getColorReset returns the color reset code if color output is enabled, otherwise returns empty string
+func getColorReset() string {
+	if noColor {
+		return ""
+	}
+	return colorReset
+}
+
+// SetNoColor sets the global color output setting
+func SetNoColor(disable bool) {
+	noColor = disable
+}
 
 // Logger represents a logger with a specific indentation level and prefix
 type Logger struct {
@@ -187,7 +209,7 @@ func (l *Logger) Log(format string, args ...interface{}) *Logger {
 
 		// Add color if specified
 		if l.color != "" {
-			fullMsg = l.color + fullMsg + colorReset
+			fullMsg = getColor(l.color) + fullMsg + getColorReset()
 		}
 
 		// Print message
@@ -217,7 +239,7 @@ func (l *Logger) Debug(format string, args ...interface{}) *Logger {
 	newLogger.prefix = "» "
 	newLogger.color = colorGray
 	if verbose {
-		fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
+		fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
 	}
 	return &newLogger
 }
@@ -233,7 +255,7 @@ func (l *Logger) Info(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "+ "
 	newLogger.color = colorBlue
-	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
+	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
 	return &newLogger
 }
 
@@ -248,7 +270,7 @@ func (l *Logger) Success(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "✓ "
 	newLogger.color = colorGreen
-	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
+	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
 	return &newLogger
 }
 
@@ -263,7 +285,7 @@ func (l *Logger) Error(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "× "
 	newLogger.color = colorRed
-	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
+	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
 	return &newLogger
 }
 
