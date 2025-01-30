@@ -1,12 +1,14 @@
 package planning
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -37,6 +39,7 @@ type Issue struct {
 	State    string  `json:"state"`
 	Labels   []Label `json:"labels"`
 	Assignee *User   `json:"assignee"`
+	HTMLURL  string  `json:"html_url"`
 }
 
 // Label represents a GitHub label
@@ -64,6 +67,7 @@ type Options struct {
 	PlanningLabel string
 	Categories    []string
 	ExcludePR     bool
+	DryRun        bool
 }
 
 // DefaultOptions returns default planning options
@@ -72,6 +76,7 @@ func DefaultOptions() Options {
 		PlanningLabel: "planning",
 		Categories:    []string{"bug", "documentation", "enhancement"},
 		ExcludePR:     true,
+		DryRun:        false,
 	}
 }
 
@@ -93,13 +98,37 @@ type TemplateData struct {
 	ProgressBar         string
 }
 
+// askForConfirmation asks the user for confirmation
+func askForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		log.P("?").C(log.ColorBlue).N().Log("%s [y/n]: ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Error("Error reading input: %v", err)
+			return false
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+}
+
 // Update updates or creates a planning issue for a milestone
 func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumber int, opts Options) error {
 	log.Debug("Updating planning issue for milestone #%d in %s/%s", milestoneNumber, owner, repo)
 
 	// Get milestone
 	var milestone Milestone
-	err := m.client.Get(fmt.Sprintf("repos/%s/%s/milestones/%d", owner, repo, milestoneNumber), &milestone)
+	path := fmt.Sprintf("repos/%s/%s/milestones/%d", owner, repo, milestoneNumber)
+	err := m.client.Get(path, &milestone)
 	if err != nil {
 		return fmt.Errorf("failed to get milestone: %w", err)
 	}
@@ -107,45 +136,40 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 
 	// Get all issues in the milestone
 	var issues []Issue
-	err = m.client.Get(fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all", owner, repo, milestoneNumber), &issues)
+	path = fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all", owner, repo, milestoneNumber)
+	err = m.client.Get(path, &issues)
 	if err != nil {
 		return fmt.Errorf("failed to get issues: %w", err)
 	}
 	log.Debug("Found %d issues in milestone", len(issues))
 
-	// Filter out PRs if needed
+	// Filter out pull requests if exclude_pr is true
 	if opts.ExcludePR {
-		var filteredIssues []Issue
+		var filtered []Issue
 		for _, issue := range issues {
-			isPR := false
-			for _, label := range issue.Labels {
-				if strings.HasPrefix(label.Name, "pr/") {
-					isPR = true
-					break
-				}
-			}
-			if !isPR {
-				filteredIssues = append(filteredIssues, issue)
+			if !strings.Contains(issue.HTMLURL, "/pull/") {
+				filtered = append(filtered, issue)
 			}
 		}
-		issues = filteredIssues
+		issues = filtered
 	}
 
-	// Prepare template data
+	// Prepare data for template
 	data := m.prepareTemplateData(milestone, issues, opts.Categories)
 
-	// Generate content
+	// Generate planning content
 	content, err := m.generatePlanningContent(data)
 	if err != nil {
-		return fmt.Errorf("failed to generate content: %w", err)
+		return fmt.Errorf("failed to generate planning content: %w", err)
 	}
 	log.Debug("Generated planning content with %d bytes", len(content))
 
 	// Find existing planning issue
+	path = fmt.Sprintf("repos/%s/%s/issues?labels=%s&state=all", owner, repo, opts.PlanningLabel)
 	var existingIssues []Issue
-	err = m.client.Get(fmt.Sprintf("repos/%s/%s/issues?labels=%s&state=all", owner, repo, opts.PlanningLabel), &existingIssues)
+	err = m.client.Get(path, &existingIssues)
 	if err != nil {
-		return fmt.Errorf("failed to get existing issues: %w", err)
+		return fmt.Errorf("failed to get existing planning issues: %w", err)
 	}
 	log.Debug("Found %d existing issues with planning label", len(existingIssues))
 
@@ -162,49 +186,78 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		}
 	}
 
-	// Create or update planning issue
+	// Show preview
 	if planningIssue == nil {
-		log.Info("Creating new planning issue for milestone #%d (%s)", milestone.Number, milestone.Title)
-		// Create new issue
-		body := map[string]interface{}{
-			"title":  planningTitle,
-			"body":   content,
-			"labels": []string{opts.PlanningLabel},
-		}
-		bodyBytes, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("failed to marshal request body: %w", err)
-		}
-
-		path := fmt.Sprintf("repos/%s/%s/issues", owner, repo)
-		var response struct {
-			Number int `json:"number"`
-		}
-		err = m.client.Post(path, bytes.NewReader(bodyBytes), &response)
-		if err != nil {
-			return fmt.Errorf("failed to create planning issue: %w", err)
-		}
-		issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, response.Number)
-		log.Success("Successfully created planning issue for milestone '%s'", milestone.Title).
-			L(1).P("→").Log("Planning issue URL: %s", issueURL)
+		log.Info("Creating new planning issue for milestone '%s'", milestone.Title)
 	} else {
 		log.Info("Updating existing planning issue #%d for milestone #%d (%s)", planningIssue.Number, milestone.Number, milestone.Title)
-		// Update existing issue
-		body := map[string]interface{}{
-			"body": content,
-		}
-		bodyBytes, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	// Preview the content
+	log.C(log.ColorBlue).P("↓").Log("Preview of the planning content:")
+	log.C(log.ColorCyan).Log("%s", content)
+
+	if !opts.DryRun {
+		// Show update target
+		if planningIssue == nil {
+			log.Info("Will create a new planning issue with the above content")
+		} else {
+			issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
+			log.Info("Will update existing planning issue (%s) with the above content", issueURL)
 		}
 
-		err = m.client.Patch(fmt.Sprintf("repos/%s/%s/issues/%d", owner, repo, planningIssue.Number), bytes.NewReader(bodyBytes), nil)
-		if err != nil {
-			return fmt.Errorf("failed to update planning issue: %w", err)
+		// Ask for confirmation
+		if !askForConfirmation("Do you want to proceed with the update?") {
+			log.Info("Update cancelled")
+			return nil
 		}
-		issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
-		log.Success("Successfully updated planning issue #%d", planningIssue.Number).
-			L(1).P("→").Log("Planning issue URL: %s", issueURL)
+
+		// Create or update the planning issue
+		if planningIssue == nil {
+			// Create new issue
+			body := map[string]interface{}{
+				"title":  planningTitle,
+				"body":   content,
+				"labels": []string{opts.PlanningLabel},
+			}
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return fmt.Errorf("failed to marshal request body: %w", err)
+			}
+
+			path := fmt.Sprintf("repos/%s/%s/issues", owner, repo)
+			var response struct {
+				Number int `json:"number"`
+			}
+			err = m.client.Post(path, bytes.NewReader(bodyBytes), &response)
+			if err != nil {
+				return fmt.Errorf("failed to create planning issue: %w", err)
+			}
+			issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, response.Number)
+			log.Success("Successfully created planning issue for milestone '%s'", milestone.Title).
+				L(1).P("→").Log("Planning issue URL: %s", issueURL)
+		} else {
+			// Update existing issue
+			body := map[string]interface{}{
+				"title": planningTitle,
+				"body":  content,
+			}
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return fmt.Errorf("failed to marshal request body: %w", err)
+			}
+
+			path := fmt.Sprintf("repos/%s/%s/issues/%d", owner, repo, planningIssue.Number)
+			err = m.client.Patch(path, bytes.NewReader(bodyBytes), nil)
+			if err != nil {
+				return fmt.Errorf("failed to update planning issue: %w", err)
+			}
+			issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
+			log.Success("Successfully updated planning issue #%d", planningIssue.Number).
+				L(1).P("→").Log("Planning issue URL: %s", issueURL)
+		}
+	} else {
+		log.C(log.ColorYellow).P("!").Log("Dry-run mode, skipping update")
 	}
 
 	return nil

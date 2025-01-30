@@ -64,6 +64,7 @@ package log
 
 import (
 	"fmt"
+	"strings"
 )
 
 var (
@@ -88,9 +89,10 @@ const (
 
 // Logger represents a logger with a specific indentation level and prefix
 type Logger struct {
-	level  int    // indentation level
-	prefix string // prefix symbol
-	color  string // ANSI color code
+	level     int    // indentation level
+	prefix    string // prefix symbol
+	color     string // ANSI color code
+	noNewline bool   // control whether to output newline at the end
 }
 
 // getIndent returns the current indentation string
@@ -144,6 +146,13 @@ func (l *Logger) C(color string) *Logger {
 	return &newLogger
 }
 
+// N disables the newline at the end of the log message
+func (l *Logger) N() *Logger {
+	newLogger := *l
+	newLogger.noNewline = true
+	return &newLogger
+}
+
 // Log prints message with current level and prefix, then returns a new logger.
 //
 // Example:
@@ -153,12 +162,45 @@ func (l *Logger) C(color string) *Logger {
 //	//   → Message 1
 //	//   → Message 2
 func (l *Logger) Log(format string, args ...interface{}) *Logger {
-	if l.color != "" {
-		fmt.Printf(l.getIndent()+l.color+l.prefix+format+colorReset+"\n", args...)
-	} else {
-		fmt.Printf(l.getIndent()+l.prefix+format+"\n", args...)
+	// Format message
+	msg := fmt.Sprintf(format, args...)
+
+	// Get base indentation
+	indent := l.getIndent()
+
+	// Build prefix
+	prefix := l.prefix
+
+	// Split message into lines and process each line
+	lines := strings.Split(msg, "\n")
+	for i, line := range lines {
+		// Build full message with indentation and prefix
+		fullMsg := indent
+		if i == 0 {
+			// Only add prefix for the first line
+			fullMsg += prefix
+		} else {
+			// For other lines, add spaces to align with the first line
+			fullMsg += strings.Repeat(" ", len(prefix))
+		}
+		fullMsg += line
+
+		// Add color if specified
+		if l.color != "" {
+			fullMsg = l.color + fullMsg + colorReset
+		}
+
+		// Print message
+		if i < len(lines)-1 || !l.noNewline {
+			fmt.Println(fullMsg)
+		} else {
+			fmt.Print(fullMsg)
+		}
 	}
+
+	// Return a new logger with the same settings (except noNewline)
 	newLogger := *l
+	newLogger.noNewline = false
 	return &newLogger
 }
 
@@ -260,7 +302,7 @@ func L(level int) *Logger {
 //	// Output:
 //	//   → Child message
 func P(prefix string) *Logger {
-	return &Logger{prefix: prefix}
+	return &Logger{prefix: prefix + " "}
 }
 
 // C sets the color of the logger and returns a new logger.
@@ -273,6 +315,11 @@ func P(prefix string) *Logger {
 //	//   Error message (in red)
 func C(color string) *Logger {
 	return &Logger{color: color}
+}
+
+// N is a convenience function that creates a new logger and disables the newline
+func N() *Logger {
+	return New().N()
 }
 
 // Log is a convenience function that creates a new logger and calls Log.

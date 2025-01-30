@@ -17,6 +17,7 @@ func newPlanCmd() *cobra.Command {
 		planningLabel string
 		categories    []string
 		excludePR     bool
+		dryRun        bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,7 +27,10 @@ func newPlanCmd() *cobra.Command {
 This command will create or update a planning issue that summarizes all issues
 in the specified milestone or all open milestones, categorized by their labels.
 
-If no milestone number is provided, it will scan all open milestones.`,
+If no milestone number is provided, it will scan all open milestones.
+
+By default, it will show the preview of the planning content and ask for confirmation
+before creating or updating the planning issue.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get GitHub client
@@ -63,6 +67,7 @@ If no milestone number is provided, it will scan all open milestones.`,
 				PlanningLabel: planningLabel,
 				Categories:    categories,
 				ExcludePR:     excludePR,
+				DryRun:        dryRun,
 			}
 
 			// If milestone number is provided, update that specific milestone
@@ -100,9 +105,10 @@ If no milestone number is provided, it will scan all open milestones.`,
 	}
 
 	// Add flags
-	cmd.Flags().StringVarP(&planningLabel, "label", "l", "planning", "Label for planning issues")
-	cmd.Flags().StringSliceVarP(&categories, "categories", "c", []string{"bug", "documentation", "enhancement"}, "Categories for issues")
-	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", true, "Exclude pull requests from the summary")
+	cmd.Flags().StringVarP(&planningLabel, "label", "l", planning.DefaultOptions().PlanningLabel, "Label to use for planning issues")
+	cmd.Flags().StringSliceVarP(&categories, "categories", "c", planning.DefaultOptions().Categories, "Categories to group issues by")
+	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", planning.DefaultOptions().DryRun, "Only show what would be done without making actual changes")
 
 	return cmd
 }
