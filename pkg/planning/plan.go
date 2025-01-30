@@ -67,7 +67,8 @@ type Options struct {
 	PlanningLabel string
 	Categories    []string
 	ExcludePR     bool
-	DryRun        bool
+	DryRun        bool // If true, only show the planning content without updating
+	AutoConfirm   bool // If true, skip confirmation and update automatically
 }
 
 // DefaultOptions returns default planning options
@@ -77,6 +78,7 @@ func DefaultOptions() Options {
 		Categories:    []string{"bug", "documentation", "enhancement"},
 		ExcludePR:     true,
 		DryRun:        false,
+		AutoConfirm:   false,
 	}
 }
 
@@ -198,18 +200,22 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	log.C(log.ColorCyan).Log("%s", content)
 
 	if !opts.DryRun {
-		// Show update target
-		if planningIssue == nil {
-			log.Info("Will create a new planning issue with the above content")
-		} else {
-			issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
-			log.Info("Will update existing planning issue (%s) with the above content", issueURL)
-		}
+		// Ask for confirmation if auto-confirm is not enabled
+		if !opts.AutoConfirm {
+			// Show update target
+			if planningIssue == nil {
+				log.Info("Will create a new planning issue with the above content")
+			} else {
+				issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
+				log.Info("Will update existing planning issue (%s) with the above content", issueURL)
+			}
 
-		// Ask for confirmation
-		if !askForConfirmation("Do you want to proceed with the update?") {
-			log.Info("Update cancelled")
-			return nil
+			if !askForConfirmation("Do you want to proceed with the update?") {
+				log.Info("Update cancelled")
+				return nil
+			}
+		} else {
+			log.C(log.ColorYellow).P("!").Log("Auto-confirm is enabled, skipping confirmation")
 		}
 
 		// Create or update the planning issue

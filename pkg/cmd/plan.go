@@ -18,6 +18,7 @@ func newPlanCmd() *cobra.Command {
 		categories    []string
 		excludePR     bool
 		dryRun        bool
+		autoConfirm   bool
 	)
 
 	cmd := &cobra.Command{
@@ -68,6 +69,7 @@ before creating or updating the planning issue.`,
 				Categories:    categories,
 				ExcludePR:     excludePR,
 				DryRun:        dryRun,
+				AutoConfirm:   autoConfirm,
 			}
 
 			// If milestone number is provided, update that specific milestone
@@ -109,6 +111,7 @@ before creating or updating the planning issue.`,
 	cmd.Flags().StringSliceVarP(&categories, "categories", "c", planning.DefaultOptions().Categories, "Categories to group issues by")
 	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", planning.DefaultOptions().DryRun, "Only show what would be done without making actual changes")
+	cmd.Flags().BoolVarP(&autoConfirm, "yes", "y", planning.DefaultOptions().AutoConfirm, "Skip confirmation and update automatically")
 
 	return cmd
 }
