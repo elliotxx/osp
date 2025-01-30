@@ -25,8 +25,8 @@ osp repo current             # 显示当前操作的仓库
 osp plan <milestone-number>                   # 基于里程碑生成规划文档
   --label, -l planning                        # 自定义规划标签
   --categories, -c bug,documentation          # 自定义分类
-  --priorities, -p high,medium,low            # 自定义优先级标签，按优先级从高到低排序
-  --exclude-pr, -e=false                      # 包含 PR
+  --priorities, -p high,medium,low            # 自定义优先级标签列表，按优先级从高到低排序，前两个标签将显示在高优先级任务部分
+  --exclude-pr, -e=false                      # 排除 PR（默认：false）
   --dry-run, -d                               # 仅显示内容，不更新
   --yes, -y                                   # 跳过确认，自动更新
 ```
@@ -221,4 +221,3 @@ osp health        # 项目健康度
 osp trend         # 发展趋势分析
 osp compare       # 与其他项目对比
 osp action        # GitHub Action 管理
-```

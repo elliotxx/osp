@@ -111,7 +111,7 @@ before creating or updating the planning issue.`,
 	// Add flags
 	cmd.Flags().StringVarP(&planningLabel, "label", "l", planning.DefaultOptions().PlanningLabel, "Label to use for planning issues")
 	cmd.Flags().StringSliceVarP(&categories, "categories", "c", planning.DefaultOptions().Categories, "Categories to group issues by")
-	cmd.Flags().StringSliceVarP(&priorities, "priorities", "p", planning.DefaultOptions().Priorities, "Priority labels to sort issues by, from high to low")
+	cmd.Flags().StringSliceVarP(&priorities, "priorities", "p", planning.DefaultOptions().Priorities, "Priority labels to sort issues by, from high to low. The first two labels will be shown in High Priority Tasks section.")
 	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", planning.DefaultOptions().DryRun, "Only show what would be done without making actual changes")
 	cmd.Flags().BoolVarP(&autoConfirm, "yes", "y", planning.DefaultOptions().AutoConfirm, "Skip confirmation and update automatically")

@@ -77,10 +77,10 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		PlanningLabel: "planning",
-		Categories:    []string{"bug", "documentation", "enhancement"},
 		ExcludePR:     true,
 		DryRun:        false,
 		AutoConfirm:   false,
+		Categories:    []string{"bug", "documentation", "enhancement"},
 		Priorities:    []string{"priority/high", "priority/medium", "priority/low"},
 	}
 }
