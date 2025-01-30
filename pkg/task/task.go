@@ -3,7 +3,7 @@ package task
 import (
 	"context"
 
-	"github.com/elliotxx/osp/internal/config"
+	"github.com/elliotxx/osp/pkg/config"
 )
 
 // Manager handles task management

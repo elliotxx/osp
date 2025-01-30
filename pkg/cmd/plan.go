@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
-	"github.com/elliotxx/osp/internal/config"
-	"github.com/elliotxx/osp/internal/planning"
-	"github.com/elliotxx/osp/internal/repo"
+	"github.com/elliotxx/osp/pkg/config"
+	"github.com/elliotxx/osp/pkg/planning"
+	"github.com/elliotxx/osp/pkg/repo"
 	"github.com/spf13/cobra"
 )
 

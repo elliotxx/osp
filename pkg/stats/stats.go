@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/elliotxx/osp/internal/config"
+	"github.com/elliotxx/osp/pkg/config"
 )
 
 // Manager handles repository statistics

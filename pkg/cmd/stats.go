@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/elliotxx/osp/internal/config"
-	"github.com/elliotxx/osp/internal/stats"
+	"github.com/elliotxx/osp/pkg/config"
+	"github.com/elliotxx/osp/pkg/stats"
 	"github.com/spf13/cobra"
 )
 

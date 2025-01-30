@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/elliotxx/osp/internal/config"
-	"github.com/elliotxx/osp/internal/repo"
+	"github.com/elliotxx/osp/pkg/config"
+	"github.com/elliotxx/osp/pkg/repo"
 	"github.com/spf13/cobra"
 )
 

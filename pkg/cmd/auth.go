@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/elliotxx/osp/internal/auth"
+	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/spf13/cobra"
 )
 
