@@ -10,6 +10,8 @@
 {{ if .Milestone.Description }}{{ .Milestone.Description }}{{ else }}No description provided.{{ end }}
 
 {{ if .HighPriorityIssues }}## High Priority Tasks
+> Display issues with {{ getTopTwoPriorities }} priority labels.
+
 {{ range $issue := .HighPriorityIssues }}- [{{ if eq $issue.State "closed" }}x{{ else }} {{ end }}] {{ $level := getPriorityLevel $issue.Labels }}{{ getPriorityMark $level }} #{{ $issue.Number }}{{ if $issue.Assignee }} (@{{ $issue.Assignee.Login }}){{ end }}{{ range $label := $issue.Labels }} `{{ $label.Name }}`{{ end }}
 {{ end }}{{ end }}
 ## Tasks by Category

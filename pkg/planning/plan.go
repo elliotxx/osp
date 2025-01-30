@@ -430,6 +430,15 @@ func (m *Manager) generatePlanningContentWithTime(data TemplateData, now time.Ti
 			}
 			return strings.Repeat("!", len(data.Priorities)-level)
 		},
+		"getTopTwoPriorities": func() string {
+			if len(data.Priorities) == 0 {
+				return ""
+			}
+			if len(data.Priorities) == 1 {
+				return fmt.Sprintf("`%s`", data.Priorities[0])
+			}
+			return fmt.Sprintf("`%s` and `%s`", data.Priorities[0], data.Priorities[1])
+		},
 	}
 
 	// Load template with functions
