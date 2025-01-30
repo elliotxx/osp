@@ -56,10 +56,27 @@ var (
 	verbose bool
 )
 
+// ANSI color codes
+const (
+	// Colors
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorPurple = "\033[35m"
+	colorCyan   = "\033[36m"
+	colorGray   = "\033[90m"
+
+	// Styles
+	styleBold = "\033[1m"
+)
+
 // Logger represents a logger with a specific indentation level and prefix
 type Logger struct {
 	level  int    // indentation level
 	prefix string // prefix symbol
+	color  string // ANSI color code
 }
 
 // getIndent returns the current indentation string
@@ -99,6 +116,20 @@ func (l *Logger) L(level int) *Logger {
 	return &newLogger
 }
 
+// C sets the color of the logger and returns a new logger.
+// The color will be used by subsequent Log calls.
+//
+// Example:
+//
+//	log.L(1).C(colorRed).Log("Error message")
+//	// Output:
+//	//   Error message (in red)
+func (l *Logger) C(color string) *Logger {
+	newLogger := *l
+	newLogger.color = color
+	return &newLogger
+}
+
 // Log prints message with current level and prefix, then returns a new logger.
 //
 // Example:
@@ -108,7 +139,11 @@ func (l *Logger) L(level int) *Logger {
 //	//   → Message 1
 //	//   → Message 2
 func (l *Logger) Log(format string, args ...interface{}) *Logger {
-	fmt.Printf(l.getIndent()+l.prefix+format+"\n", args...)
+	if l.color != "" {
+		fmt.Printf(l.getIndent()+l.color+l.prefix+format+colorReset+"\n", args...)
+	} else {
+		fmt.Printf(l.getIndent()+l.prefix+format+"\n", args...)
+	}
 	newLogger := *l
 	return &newLogger
 }
@@ -124,8 +159,9 @@ func (l *Logger) Log(format string, args ...interface{}) *Logger {
 func (l *Logger) Debug(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "» "
+	newLogger.color = colorGray
 	if verbose {
-		fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+		fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
 	}
 	return &newLogger
 }
@@ -140,7 +176,8 @@ func (l *Logger) Debug(format string, args ...interface{}) *Logger {
 func (l *Logger) Info(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "+ "
-	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	newLogger.color = colorBlue
+	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
 	return &newLogger
 }
 
@@ -154,7 +191,8 @@ func (l *Logger) Info(format string, args ...interface{}) *Logger {
 func (l *Logger) Success(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "✓ "
-	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	newLogger.color = colorGreen
+	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
 	return &newLogger
 }
 
@@ -168,7 +206,8 @@ func (l *Logger) Success(format string, args ...interface{}) *Logger {
 func (l *Logger) Error(format string, args ...interface{}) *Logger {
 	newLogger := *l
 	newLogger.prefix = "× "
-	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	newLogger.color = colorRed
+	fmt.Printf(newLogger.getIndent()+newLogger.color+newLogger.prefix+format+colorReset+"\n", args...)
 	return &newLogger
 }
 
@@ -210,6 +249,18 @@ func P(prefix string) *Logger {
 	return &Logger{prefix: prefix}
 }
 
+// C sets the color of the logger and returns a new logger.
+// The color will be used by subsequent Log calls.
+//
+// Example:
+//
+//	log.L(1).C(colorRed).Log("Error message")
+//	// Output:
+//	//   Error message (in red)
+func C(color string) *Logger {
+	return &Logger{color: color}
+}
+
 // Log is a convenience function that creates a new logger and calls Log.
 func Log(format string, args ...interface{}) *Logger {
 	return New().Log(format, args...)
@@ -234,3 +285,16 @@ func Success(format string, args ...interface{}) *Logger {
 func Error(format string, args ...interface{}) *Logger {
 	return New().Error(format, args...)
 }
+
+// Color constants for use with C() method
+var (
+	ColorReset  = colorReset
+	ColorRed    = colorRed
+	ColorGreen  = colorGreen
+	ColorYellow = colorYellow
+	ColorBlue   = colorBlue
+	ColorPurple = colorPurple
+	ColorCyan   = colorCyan
+	ColorGray   = colorGray
+	StyleBold   = styleBold
+)
