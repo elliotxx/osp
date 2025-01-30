@@ -75,7 +75,6 @@ in the specified milestone, categorized by their labels.`,
 				return err
 			}
 
-			fmt.Println("✓ Successfully updated planning")
 			return nil
 		},
 	}

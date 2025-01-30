@@ -6,11 +6,13 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/elliotxx/osp/pkg/log"
 )
 
 //go:embed templates/*.gotmpl
@@ -93,12 +95,15 @@ type TemplateData struct {
 
 // Update updates or creates a planning issue for a milestone
 func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumber int, opts Options) error {
+	log.Debug("Updating planning issue for milestone #%d in %s/%s", milestoneNumber, owner, repo)
+
 	// Get milestone
 	var milestone Milestone
 	err := m.client.Get(fmt.Sprintf("repos/%s/%s/milestones/%d", owner, repo, milestoneNumber), &milestone)
 	if err != nil {
 		return fmt.Errorf("failed to get milestone: %w", err)
 	}
+	log.Debug("Found milestone: %s (#%d)", milestone.Title, milestone.Number)
 
 	// Get all issues in the milestone
 	var issues []Issue
@@ -106,6 +111,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	if err != nil {
 		return fmt.Errorf("failed to get issues: %w", err)
 	}
+	log.Debug("Found %d issues in milestone", len(issues))
 
 	// Filter out PRs if needed
 	if opts.ExcludePR {
@@ -133,6 +139,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	if err != nil {
 		return fmt.Errorf("failed to generate content: %w", err)
 	}
+	log.Debug("Generated planning content with %d bytes", len(content))
 
 	// Find existing planning issue
 	var existingIssues []Issue
@@ -140,21 +147,24 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	if err != nil {
 		return fmt.Errorf("failed to get existing issues: %w", err)
 	}
+	log.Debug("Found %d existing issues with planning label", len(existingIssues))
 
 	planningTitle := fmt.Sprintf("Planning: %s", milestone.Title)
 	var planningIssue *Issue
-	var minIssueNumber int = 2147483647
+	var minIssueNumber int = math.MaxInt32
 	for _, issue := range existingIssues {
 		if issue.Title == planningTitle {
 			if planningIssue == nil || issue.Number < minIssueNumber {
 				planningIssue = &issue
 				minIssueNumber = issue.Number
+				log.Debug("Found planning issue #%d with title '%s'", issue.Number, issue.Title)
 			}
 		}
 	}
 
 	// Create or update planning issue
 	if planningIssue == nil {
+		log.Info("Creating new planning issue for milestone '%s'", milestone.Title)
 		// Create new issue
 		body := map[string]interface{}{
 			"title":  planningTitle,
@@ -165,11 +175,14 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
+
 		err = m.client.Post(fmt.Sprintf("repos/%s/%s/issues", owner, repo), bytes.NewReader(bodyBytes), nil)
 		if err != nil {
 			return fmt.Errorf("failed to create planning issue: %w", err)
 		}
+		log.Success("Successfully created planning issue for milestone '%s'", milestone.Title)
 	} else {
+		log.Info("Updating existing planning issue #%d", planningIssue.Number)
 		// Update existing issue
 		body := map[string]interface{}{
 			"body": content,
@@ -178,10 +191,12 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
+
 		err = m.client.Patch(fmt.Sprintf("repos/%s/%s/issues/%d", owner, repo, planningIssue.Number), bytes.NewReader(bodyBytes), nil)
 		if err != nil {
 			return fmt.Errorf("failed to update planning issue: %w", err)
 		}
+		log.Success("Successfully updated planning issue #%d", planningIssue.Number)
 	}
 
 	return nil

@@ -50,12 +50,10 @@ osp task           # 查看/生成任务
 
 ### 活动追踪
 ```bash
-osp activity       # 查看活动
-  --type issue     # 按类型筛选
-  --type pr
-  --type discussion
-  --period 7d      # 时间范围
-  --format daily   # 日报格式
+osp activity         # 查看活动
+  --type issue      # Issue 活动
+  --type pr        # PR 活动
+  --period 7d     # 指定统计周期
 ```
 
 ## 命令设计原则
@@ -149,6 +147,39 @@ osp activity       # 查看活动
 3. 列表输出
    - 清晰的缩进
    - 当前项标记
+
+## 全局参数
+
+OSP 支持以下全局参数：
+
+- `--verbose, -v`: 显示详细的执行日志
+  - 默认值：false
+  - 当启用时，会显示所有级别的日志信息，包括追踪信息
+  - 当禁用时，只显示操作、成功和错误信息
+
+## 日志级别
+
+OSP 使用不同的符号来标记不同级别的日志信息：
+
+- `»` 表示追踪信息
+  - 仅在 verbose 模式下显示
+  - 用于展示详细的执行步骤和中间状态
+  - 例如：`» Found milestone: v1.0.0 (#1)`
+
+- `+` 表示正在执行的操作
+  - 默认显示
+  - 用于提示用户当前正在进行的操作
+  - 例如：`+ Updating existing planning issue #3`
+
+- `✓` 表示操作成功完成
+  - 默认显示
+  - 用于确认操作已经成功完成
+  - 例如：`✓ Successfully updated planning issue #3`
+
+- `×` 表示操作失败
+  - 默认显示
+  - 用于提示用户操作失败和错误信息
+  - 例如：`× Failed to get milestone: 404 Not Found`
 
 ## 未来扩展
 

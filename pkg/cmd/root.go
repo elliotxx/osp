@@ -6,15 +6,22 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/elliotxx/osp/pkg/log"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "osp",
-	Short: "Open Source Project Management Tool",
-	Long: `OSP is a command-line tool for managing open source projects.
+var (
+	verbose bool
+	rootCmd = &cobra.Command{
+		Use:   "osp",
+		Short: "Open Source Project Management Tool",
+		Long: `OSP is a command-line tool for managing open source projects.
 It helps you manage issues, milestones, planning, and more.`,
-}
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			log.SetVerbose(verbose)
+		},
+	}
+)
 
 // Repository represents a GitHub repository
 type Repository struct {
@@ -25,12 +32,15 @@ type Repository struct {
 // Execute executes the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Error("%v", err)
 		os.Exit(1)
 	}
 }
 
 func init() {
+	// Add global flags
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+
 	rootCmd.AddCommand(
 		newAuthCmd(),
 		newPlanCmd(),
