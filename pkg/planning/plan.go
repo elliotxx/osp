@@ -3,13 +3,18 @@ package planning
 import (
 	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 )
+
+//go:embed templates/*.gotmpl
+var templates embed.FS
 
 // Manager handles GitHub planning
 type Manager struct {
@@ -25,11 +30,11 @@ func NewManager(client *api.RESTClient) *Manager {
 
 // Issue represents a GitHub issue
 type Issue struct {
-	Title    string   `json:"title"`
-	Number   int      `json:"number"`
-	State    string   `json:"state"`
-	Labels   []Label  `json:"labels"`
-	Assignee *User    `json:"assignee"`
+	Title    string  `json:"title"`
+	Number   int     `json:"number"`
+	State    string  `json:"state"`
+	Labels   []Label `json:"labels"`
+	Assignee *User   `json:"assignee"`
 }
 
 // Label represents a GitHub label
@@ -67,103 +72,85 @@ func DefaultOptions() Options {
 	}
 }
 
+// MilestoneStats represents milestone statistics
+type MilestoneStats struct {
+	TotalIssues     int
+	CompletedIssues int
+	Progress        float64
+	Contributors    []string
+}
+
+// TemplateData represents the data passed to the template
+type TemplateData struct {
+	Milestone           Milestone
+	Stats               MilestoneStats
+	Categories          []string
+	Issues              map[string][]Issue
+	UncategorizedIssues []Issue
+	ProgressBar         string
+}
+
 // Update updates or creates a planning issue for a milestone
 func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumber int, opts Options) error {
-	// Get milestone details
+	// Get milestone
 	var milestone Milestone
 	err := m.client.Get(fmt.Sprintf("repos/%s/%s/milestones/%d", owner, repo, milestoneNumber), &milestone)
 	if err != nil {
 		return fmt.Errorf("failed to get milestone: %w", err)
 	}
 
-	// Skip if milestone is closed
-	if milestone.State == "closed" {
-		return fmt.Errorf("milestone #%d is closed", milestoneNumber)
-	}
-
-	// Get all issues for this milestone
-	var allIssues []struct {
-		Issue
-		PullRequest interface{} `json:"pull_request"`
-		HTMLURL     string      `json:"html_url"`
-	}
-	page := 1
-	perPage := 30
-
-	for {
-		var issues []struct {
-			Issue
-			PullRequest interface{} `json:"pull_request"`
-			HTMLURL     string      `json:"html_url"`
-		}
-		err := m.client.Get(fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all&per_page=%d&page=%d", 
-			owner, repo, milestoneNumber, perPage, page), &issues)
-		if err != nil {
-			return fmt.Errorf("failed to get issues: %w", err)
-		}
-
-		allIssues = append(allIssues, issues...)
-
-		if len(issues) < perPage {
-			break
-		}
-		page++
-	}
-
-	// Filter out pull requests if excludePR is true
+	// Get all issues in the milestone
 	var issues []Issue
-	for _, item := range allIssues {
-		if opts.ExcludePR {
-			isPR := item.PullRequest != nil || 
-				strings.Contains(item.HTMLURL, "/pull/")
-			if isPR {
-				continue
+	err = m.client.Get(fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all", owner, repo, milestoneNumber), &issues)
+	if err != nil {
+		return fmt.Errorf("failed to get issues: %w", err)
+	}
+
+	// Filter out PRs if needed
+	if opts.ExcludePR {
+		var filteredIssues []Issue
+		for _, issue := range issues {
+			isPR := false
+			for _, label := range issue.Labels {
+				if strings.HasPrefix(label.Name, "pr/") {
+					isPR = true
+					break
+				}
+			}
+			if !isPR {
+				filteredIssues = append(filteredIssues, issue)
 			}
 		}
-		issues = append(issues, item.Issue)
+		issues = filteredIssues
 	}
 
-	// Generate planning content
-	content := generatePlanningContent(milestone, issues, opts.Categories)
+	// Prepare template data
+	data := m.prepareTemplateData(milestone, issues, opts.Categories)
+
+	// Generate content
+	content, err := m.generatePlanningContent(data)
+	if err != nil {
+		return fmt.Errorf("failed to generate content: %w", err)
+	}
 
 	// Find existing planning issue
-	var existingIssues []struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
-	}
-	err = m.client.Get(fmt.Sprintf("repos/%s/%s/issues?labels=%s&state=open", 
-		owner, repo, opts.PlanningLabel), &existingIssues)
+	var existingIssues []Issue
+	err = m.client.Get(fmt.Sprintf("repos/%s/%s/issues?labels=%s&state=all", owner, repo, opts.PlanningLabel), &existingIssues)
 	if err != nil {
 		return fmt.Errorf("failed to get existing issues: %w", err)
 	}
 
-	var planningIssue *struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
-	}
+	var planningIssue *Issue
 	for _, issue := range existingIssues {
-		if strings.Contains(issue.Title, milestone.Title) {
+		if strings.Contains(issue.Title, fmt.Sprintf("Milestone %d", milestoneNumber)) {
 			planningIssue = &issue
 			break
 		}
 	}
 
-	if planningIssue != nil {
-		// Update existing issue
-		body := map[string]string{"body": content}
-		bodyBytes, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("failed to marshal request body: %w", err)
-		}
-
-		err = m.client.Patch(fmt.Sprintf("repos/%s/%s/issues/%d", 
-			owner, repo, planningIssue.Number), 
-			bytes.NewReader(bodyBytes), nil)
-		if err != nil {
-			return fmt.Errorf("failed to update planning issue: %w", err)
-		}
-	} else {
-		// Create new planning issue
+	// Create or update planning issue
+	if planningIssue == nil {
+		// Create new issue
 		body := map[string]interface{}{
 			"title":  fmt.Sprintf("Planning: %s", milestone.Title),
 			"body":   content,
@@ -173,165 +160,148 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
-
-		err = m.client.Post(fmt.Sprintf("repos/%s/%s/issues", owner, repo), 
-			bytes.NewReader(bodyBytes), nil)
+		err = m.client.Post(fmt.Sprintf("repos/%s/%s/issues", owner, repo), bytes.NewReader(bodyBytes), nil)
 		if err != nil {
 			return fmt.Errorf("failed to create planning issue: %w", err)
+		}
+	} else {
+		// Update existing issue
+		body := map[string]interface{}{
+			"body": content,
+		}
+		bodyBytes, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		err = m.client.Patch(fmt.Sprintf("repos/%s/%s/issues/%d", owner, repo, planningIssue.Number), bytes.NewReader(bodyBytes), nil)
+		if err != nil {
+			return fmt.Errorf("failed to update planning issue: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// generatePlanningContent generates the complete planning content
-func generatePlanningContent(milestone Milestone, issues []Issue, categories []string) string {
+// prepareTemplateData prepares data for the template
+func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categories []string) TemplateData {
 	// Calculate statistics
 	totalIssues := len(issues)
-	var completedIssues int
+	completedIssues := 0
+	contributors := make(map[string]bool)
+
+	// Count completed issues and collect contributors of completed issues
 	for _, issue := range issues {
 		if issue.State == "closed" {
 			completedIssues++
-		}
-	}
-	inProgressIssues := totalIssues - completedIssues
-
-	progressBar := generateProgressBar(completedIssues, totalIssues, 20)
-	dueDate := formatDate(milestone.DueOn)
-
-	var sb strings.Builder
-
-	// Generate main content
-	fmt.Fprintf(&sb, "# %s Planning\n\n", milestone.Title)
-
-	fmt.Fprintf(&sb, "## Overview\n")
-	fmt.Fprintf(&sb, "- Progress: %s\n", progressBar)
-	fmt.Fprintf(&sb, "- Total Issues: %d\n", totalIssues)
-	fmt.Fprintf(&sb, "  - Completed: %d\n", completedIssues)
-	fmt.Fprintf(&sb, "  - In Progress: %d\n", inProgressIssues)
-	fmt.Fprintf(&sb, "- Due Date: %s\n\n", dueDate)
-
-	fmt.Fprintf(&sb, "## Description\n")
-	if milestone.Description == "" {
-		fmt.Fprintf(&sb, "No description provided.\n\n")
-	} else {
-		fmt.Fprintf(&sb, "%s\n\n", milestone.Description)
-	}
-
-	fmt.Fprintf(&sb, "## Tasks by Category\n")
-
-	// Generate sections for each category
-	for _, category := range categories {
-		section := generateCategorySection(issues, category)
-		if section != "" {
-			fmt.Fprintf(&sb, "\n%s", section)
-		}
-	}
-
-	// Generate uncategorized section
-	uncategorizedSection := generateUncategorizedSection(issues, categories)
-	if uncategorizedSection != "" {
-		fmt.Fprintf(&sb, "\n%s", uncategorizedSection)
-	}
-
-	// Add contributors section (only for completed issues)
-	var contributors []string
-	contributorsMap := make(map[string]bool)
-	for _, issue := range issues {
-		if issue.State == "closed" && issue.Assignee != nil {
-			contributorsMap[issue.Assignee.Login] = true
-		}
-	}
-	for contributor := range contributorsMap {
-		contributors = append(contributors, contributor)
-	}
-
-	if len(contributors) > 0 {
-		fmt.Fprintf(&sb, "\n## Contributors\n")
-		fmt.Fprintf(&sb, "Thanks to all our contributors for their efforts on completed issues:\n\n")
-		for _, contributor := range contributors {
-			fmt.Fprintf(&sb, "- @%s\n", contributor)
-		}
-	}
-
-	// Add footer
-	fmt.Fprintf(&sb, "\n---\n")
-	fmt.Fprintf(&sb, "> Auto-generated by [OSP](https://github.com/elliotxx/osp). DO NOT EDIT.\n")
-	fmt.Fprintf(&sb, "> Last Updated: %s\n", time.Now().Format("January 2, 2006 15:04 MST"))
-
-	return sb.String()
-}
-
-func generateProgressBar(completed int, total int, length int) string {
-	var sb strings.Builder
-	percentage := float64(completed) / float64(total) * 100
-	blocks := int(percentage / 100 * float64(length))
-	for i := 0; i < length; i++ {
-		if i < blocks {
-			sb.WriteString("█")
-		} else {
-			sb.WriteString("░")
-		}
-	}
-	return fmt.Sprintf("[%s] %.2f%%", sb.String(), percentage)
-}
-
-func formatDate(date *time.Time) string {
-	if date == nil {
-		return "No due date"
-	}
-	return date.Format("January 2, 2006")
-}
-
-func generateCategorySection(issues []Issue, category string) string {
-	var sb strings.Builder
-	var issuesInCategory []Issue
-	for _, issue := range issues {
-		for _, label := range issue.Labels {
-			if label.Name == category {
-				issuesInCategory = append(issuesInCategory, issue)
-				break
+			if issue.Assignee != nil {
+				contributors[issue.Assignee.Login] = true
 			}
 		}
 	}
-	if len(issuesInCategory) == 0 {
-		return ""
-	}
-	fmt.Fprintf(&sb, "### %s\n", category)
-	for _, issue := range issuesInCategory {
-		fmt.Fprintf(&sb, "- [%s](https://github.com/%s/%s/issues/%d) - %s\n", 
-			issue.Title, "your-username", "your-repo", issue.Number, issue.State)
-	}
-	return sb.String()
-}
 
-func generateUncategorizedSection(issues []Issue, categories []string) string {
-	var sb strings.Builder
+	// Get unique contributors
+	var contributorsList []string
+	for contributor := range contributors {
+		contributorsList = append(contributorsList, contributor)
+	}
+
+	// Group issues by category
+	issuesByCategory := make(map[string][]Issue)
 	var uncategorizedIssues []Issue
+
 	for _, issue := range issues {
-		isCategorized := false
+		categorized := false
 		for _, category := range categories {
 			for _, label := range issue.Labels {
-				if label.Name == category {
-					isCategorized = true
+				if strings.EqualFold(label.Name, category) {
+					issuesByCategory[category] = append(issuesByCategory[category], issue)
+					categorized = true
 					break
 				}
 			}
-			if isCategorized {
+			if categorized {
 				break
 			}
 		}
-		if !isCategorized {
+		if !categorized {
 			uncategorizedIssues = append(uncategorizedIssues, issue)
 		}
 	}
-	if len(uncategorizedIssues) == 0 {
-		return ""
+
+	// Calculate progress
+	var progress float64
+	if totalIssues > 0 {
+		progress = float64(completedIssues) / float64(totalIssues) * 100
 	}
-	fmt.Fprintf(&sb, "### Uncategorized\n")
-	for _, issue := range uncategorizedIssues {
-		fmt.Fprintf(&sb, "- [%s](https://github.com/%s/%s/issues/%d) - %s\n", 
-			issue.Title, "your-username", "your-repo", issue.Number, issue.State)
+
+	// Generate progress bar
+	progressBar := generateProgressBar(completedIssues, totalIssues, 20)
+
+	return TemplateData{
+		Milestone: milestone,
+		Stats: MilestoneStats{
+			TotalIssues:     totalIssues,
+			CompletedIssues: completedIssues,
+			Progress:        progress,
+			Contributors:    contributorsList,
+		},
+		Categories:          categories,
+		Issues:              issuesByCategory,
+		UncategorizedIssues: uncategorizedIssues,
+		ProgressBar:         progressBar,
 	}
-	return sb.String()
+}
+
+// generatePlanningContent generates the complete planning content using the template
+func (m *Manager) generatePlanningContent(data TemplateData) (string, error) {
+	return m.generatePlanningContentWithTime(data, time.Now())
+}
+
+// generatePlanningContentWithTime generates the complete planning content using the template with a fixed time
+func (m *Manager) generatePlanningContentWithTime(data TemplateData, now time.Time) (string, error) {
+	// Define template functions
+	funcMap := template.FuncMap{
+		"now": func() string {
+			return now.UTC().Format("January 2, 2006 15:04 MST")
+		},
+		"formatDate": func(date *time.Time) string {
+			if date == nil {
+				return "No due date"
+			}
+			return date.Format("January 2, 2006")
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
+	}
+
+	// Load template with functions
+	tmpl, err := template.New("planning.gotmpl").Funcs(funcMap).ParseFS(templates, "templates/planning.gotmpl")
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	// Execute template
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+// generateProgressBar generates a progress bar string
+func generateProgressBar(completed int, total int, length int) string {
+	if total == 0 {
+		return strings.Repeat("░", length) + " 0%"
+	}
+
+	progress := int(float64(completed) / float64(total) * float64(length))
+	percentage := int(float64(completed) / float64(total) * 100)
+
+	filled := strings.Repeat("█", progress)
+	empty := strings.Repeat("░", length-progress)
+
+	return filled + empty + fmt.Sprintf(" %d%%", percentage)
 }

@@ -1,0 +1,276 @@
+package planning
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"strings"
+)
+
+func TestGenerateProgressBar(t *testing.T) {
+	tests := []struct {
+		name      string
+		completed int
+		total     int
+		length    int
+		want      string
+	}{
+		{
+			name:      "empty progress",
+			completed: 0,
+			total:     0,
+			length:    10,
+			want:      "░░░░░░░░░░ 0%",
+		},
+		{
+			name:      "half progress",
+			completed: 5,
+			total:     10,
+			length:    10,
+			want:      "█████░░░░░ 50%",
+		},
+		{
+			name:      "full progress",
+			completed: 10,
+			total:     10,
+			length:    10,
+			want:      "██████████ 100%",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := generateProgressBar(tt.completed, tt.total, tt.length)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestPrepareTemplateData(t *testing.T) {
+	// Mock milestone
+	milestone := Milestone{
+		Title:       "Test Milestone",
+		Description: "Test Description",
+		DueOn:       &time.Time{},
+		Number:      1,
+		State:       "open",
+	}
+
+	// Mock issues
+	issues := []Issue{
+		{
+			Title:  "Bug Issue",
+			Number: 1,
+			State:  "closed",
+			Labels: []Label{{Name: "bug"}},
+			Assignee: &User{
+				Login: "user1",
+			},
+		},
+		{
+			Title:  "Enhancement Issue",
+			Number: 2,
+			State:  "open",
+			Labels: []Label{{Name: "enhancement"}},
+			Assignee: &User{
+				Login: "user2",
+			},
+		},
+		{
+			Title:  "Uncategorized Issue",
+			Number: 3,
+			State:  "open",
+			Labels: []Label{{Name: "other"}},
+			Assignee: &User{
+				Login: "user3",
+			},
+		},
+	}
+
+	// Test categories
+	categories := []string{"bug", "enhancement"}
+
+	// Create manager
+	m := &Manager{}
+
+	// Prepare template data
+	data := m.prepareTemplateData(milestone, issues, categories)
+
+	// Assertions
+	t.Run("milestone data", func(t *testing.T) {
+		assert.Equal(t, milestone.Title, data.Milestone.Title)
+		assert.Equal(t, milestone.Description, data.Milestone.Description)
+		assert.Equal(t, milestone.Number, data.Milestone.Number)
+	})
+
+	t.Run("statistics", func(t *testing.T) {
+		assert.Equal(t, 3, data.Stats.TotalIssues)
+		assert.Equal(t, 1, data.Stats.CompletedIssues)
+		assert.InDelta(t, 33.33, data.Stats.Progress, 0.01)
+		assert.ElementsMatch(t, []string{"user1"}, data.Stats.Contributors)
+	})
+
+	t.Run("categorized issues", func(t *testing.T) {
+		// Check bug category
+		bugIssues := data.Issues["bug"]
+		assert.Len(t, bugIssues, 1)
+		assert.Equal(t, 1, bugIssues[0].Number)
+
+		// Check enhancement category
+		enhancementIssues := data.Issues["enhancement"]
+		assert.Len(t, enhancementIssues, 1)
+		assert.Equal(t, 2, enhancementIssues[0].Number)
+	})
+
+	t.Run("uncategorized issues", func(t *testing.T) {
+		assert.Len(t, data.UncategorizedIssues, 1)
+		assert.Equal(t, 3, data.UncategorizedIssues[0].Number)
+	})
+
+	t.Run("progress bar", func(t *testing.T) {
+		assert.Contains(t, data.ProgressBar, "33%")
+	})
+}
+
+func TestGeneratePlanningContent(t *testing.T) {
+	// Create a fixed time for testing
+	fixedTime := time.Date(2025, 1, 30, 15, 04, 05, 0, time.UTC)
+	dueDate := time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC)
+
+	// Mock template data
+	data := TemplateData{
+		Milestone: Milestone{
+			Title:       "v1.0.0",
+			Description: "First stable release",
+			DueOn:       &dueDate,
+			Number:      1,
+			State:       "open",
+		},
+		Stats: MilestoneStats{
+			TotalIssues:     3,
+			CompletedIssues: 1,
+			Progress:        33.33,
+			Contributors:    []string{"user1"},
+		},
+		Categories: []string{"bug", "enhancement", "documentation"},
+		Issues: map[string][]Issue{
+			"bug": {
+				{
+					Title:  "Critical Bug",
+					Number: 1,
+					State:  "closed",
+					Labels: []Label{
+						{Name: "bug"},
+						{Name: "priority/high"},
+					},
+					Assignee: &User{
+						Login: "user1",
+					},
+				},
+			},
+			"enhancement": {
+				{
+					Title:  "New Feature",
+					Number: 2,
+					State:  "open",
+					Labels: []Label{
+						{Name: "enhancement"},
+						{Name: "good first issue"},
+					},
+					Assignee: &User{
+						Login: "user2",
+					},
+				},
+			},
+		},
+		UncategorizedIssues: []Issue{
+			{
+				Title:  "Question",
+				Number: 3,
+				State:  "open",
+				Labels: []Label{
+					{Name: "question"},
+				},
+			},
+		},
+		ProgressBar: "█████░░░░░░░░░ 33%",
+	}
+
+	// Create manager
+	m := &Manager{}
+
+	// Generate content
+	content, err := m.generatePlanningContentWithTime(data, fixedTime)
+
+	// Assertions
+	t.Run("content generation", func(t *testing.T) {
+		assert.NoError(t, err)
+
+		// Check each section
+		sections := []struct {
+			name     string
+			expected []string
+		}{
+			{"header", []string{
+				"# v1.0.0 Planning",
+				"",
+				"## Overview",
+				"- Progress: █████░░░░░░░░░ 33%",
+				"- Total Issues: 3",
+				"  - ✅ Completed: 1",
+				"  - 🚧 In Progress: 2",
+				"- Due Date: February 28, 2025",
+				"",
+				"## Description",
+				"First stable release",
+				"",
+				"## Tasks by Category",
+			}},
+			{"bug section", []string{
+				"",
+				"### bug (1)",
+				"- [x] #1 (@user1) `bug` `priority/high`",
+			}},
+			{"enhancement section", []string{
+				"",
+				"### enhancement (1)",
+				"- [ ] #2 (@user2) `enhancement` `good first issue`",
+			}},
+			{"uncategorized section", []string{
+				"",
+				"### Uncategorized (1)",
+				"- [ ] #3 `question`",
+			}},
+			{"contributors section", []string{
+				"",
+				"## Contributors",
+				"Thanks to all our contributors for their efforts on completed issues:",
+				"",
+				"- @user1",
+			}},
+			{"footer", []string{
+				"",
+				"---",
+				"> 🤖 Auto-generated by [OSP](https://github.com/elliotxx/osp). DO NOT EDIT.",
+				"> Last Updated: January 30, 2025 15:04 UTC",
+			}},
+		}
+
+		// Split content into lines
+		lines := strings.Split(strings.TrimSpace(content), "\n")
+
+		// Check each section
+		currentLine := 0
+		for _, section := range sections {
+			for i, expectedLine := range section.expected {
+				if currentLine >= len(lines) {
+					t.Errorf("Section %s: Missing line %d: expected '%s'", section.name, i+1, expectedLine)
+					continue
+				}
+				assert.Equal(t, expectedLine, lines[currentLine], "Section %s: Line %d should match", section.name, i+1)
+				currentLine++
+			}
+		}
+	})
+}
