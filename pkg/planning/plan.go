@@ -102,6 +102,7 @@ type TemplateData struct {
 	UncategorizedIssues []Issue
 	HighPriorityIssues  []Issue
 	ProgressBar         string
+	Priorities          []string
 }
 
 // askForConfirmation asks the user for confirmation
@@ -356,17 +357,13 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, opts 
 
 	return TemplateData{
 		Milestone:           milestone,
+		Stats:               MilestoneStats{TotalIssues: totalIssues, CompletedIssues: completedIssues, Progress: progress, Contributors: contributorsList},
 		Categories:          opts.Categories,
 		Issues:              issuesByCategory,
 		UncategorizedIssues: uncategorizedIssues,
 		HighPriorityIssues:  highPriorityIssues,
-		Stats: MilestoneStats{
-			TotalIssues:     totalIssues,
-			CompletedIssues: completedIssues,
-			Progress:        progress,
-			Contributors:    contributorsList,
-		},
-		ProgressBar: generateProgressBar(completedIssues, totalIssues, 20),
+		ProgressBar:         generateProgressBar(completedIssues, totalIssues, 20),
+		Priorities:          opts.Priorities,
 	}
 }
 
@@ -416,6 +413,22 @@ func (m *Manager) generatePlanningContentWithTime(data TemplateData, now time.Ti
 		},
 		"sub": func(a, b int) int {
 			return a - b
+		},
+		"getPriorityLevel": func(labels []Label) int {
+			for _, label := range labels {
+				for i, priority := range data.Priorities {
+					if strings.EqualFold(label.Name, priority) {
+						return i
+					}
+				}
+			}
+			return len(data.Priorities)
+		},
+		"getPriorityMark": func(level int) string {
+			if level >= len(data.Priorities) {
+				return ""
+			}
+			return strings.Repeat("!", len(data.Priorities)-level)
 		},
 	}
 
