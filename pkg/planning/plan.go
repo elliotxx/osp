@@ -54,6 +54,7 @@ type Milestone struct {
 	Description string     `json:"description"`
 	Number      int        `json:"number"`
 	State       string     `json:"state"`
+	HTMLURL     string     `json:"html_url"`
 }
 
 // Options represents planning options
