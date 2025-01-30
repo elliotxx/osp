@@ -22,10 +22,13 @@ osp repo current             # 显示当前操作的仓库
 
 ### 规划管理
 ```bash
-osp plan <milestone-number>                  # 基于里程碑生成规划文档
-  --label planning                           # 自定义规划标签
-  --categories bug,documentation,enhancement  # 自定义分类
-  --exclude-pr=false                         # 包含 PR
+osp plan <milestone-number>                   # 基于里程碑生成规划文档
+  --label, -l planning                        # 自定义规划标签
+  --categories, -c bug,documentation          # 自定义分类
+  --priorities, -p high,medium,low            # 自定义优先级标签，按优先级从高到低排序
+  --exclude-pr, -e=false                      # 包含 PR
+  --dry-run, -d                               # 仅显示内容，不更新
+  --yes, -y                                   # 跳过确认，自动更新
 ```
 
 ### 数据统计

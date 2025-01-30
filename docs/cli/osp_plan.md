@@ -25,6 +25,7 @@ osp plan [milestone-number] [flags]
   -e, --exclude-pr           Exclude pull requests from planning (default true)
   -h, --help                 help for plan
   -l, --label string         Label to use for planning issues (default "planning")
+  -p, --priorities strings   Priority labels to sort issues by, from high to low (default [priority/high,priority/medium,priority/low])
   -y, --yes                  Skip confirmation and update automatically
 ```
 

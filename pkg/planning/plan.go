@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -17,7 +18,7 @@ import (
 	"github.com/elliotxx/osp/pkg/log"
 )
 
-//go:embed templates/*.gotmpl
+//go:embed templates/planning.gotmpl
 var templates embed.FS
 
 // Manager handles GitHub planning
@@ -67,8 +68,9 @@ type Options struct {
 	PlanningLabel string
 	Categories    []string
 	ExcludePR     bool
-	DryRun        bool // If true, only show the planning content without updating
-	AutoConfirm   bool // If true, skip confirmation and update automatically
+	DryRun        bool     // If true, only show the planning content without updating
+	AutoConfirm   bool     // If true, skip confirmation and update automatically
+	Priorities    []string // Priority labels to sort issues by, from high to low
 }
 
 // DefaultOptions returns default planning options
@@ -79,6 +81,7 @@ func DefaultOptions() Options {
 		ExcludePR:     true,
 		DryRun:        false,
 		AutoConfirm:   false,
+		Priorities:    []string{"priority/high", "priority/medium", "priority/low"},
 	}
 }
 
@@ -97,6 +100,7 @@ type TemplateData struct {
 	Categories          []string
 	Issues              map[string][]Issue
 	UncategorizedIssues []Issue
+	HighPriorityIssues  []Issue
 	ProgressBar         string
 }
 
@@ -157,7 +161,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	}
 
 	// Prepare data for template
-	data := m.prepareTemplateData(milestone, issues, opts.Categories)
+	data := m.prepareTemplateData(milestone, issues, opts)
 
 	// Generate planning content
 	content, err := m.generatePlanningContent(data)
@@ -270,7 +274,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 }
 
 // prepareTemplateData prepares data for the template
-func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categories []string) TemplateData {
+func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, opts Options) TemplateData {
 	// Calculate statistics
 	totalIssues := len(issues)
 	completedIssues := 0
@@ -298,12 +302,11 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categ
 
 	for _, issue := range issues {
 		categorized := false
-		for _, category := range categories {
+		for _, category := range opts.Categories {
 			for _, label := range issue.Labels {
 				if strings.EqualFold(label.Name, category) {
 					issuesByCategory[category] = append(issuesByCategory[category], issue)
 					categorized = true
-					// Don't break here, continue checking other categories
 				}
 			}
 		}
@@ -312,28 +315,72 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categ
 		}
 	}
 
+	// Sort issues in each category by priority
+	for category := range issuesByCategory {
+		sort.Slice(issuesByCategory[category], func(i, j int) bool {
+			iPriority := getPriorityLevel(issuesByCategory[category][i].Labels, opts.Priorities)
+			jPriority := getPriorityLevel(issuesByCategory[category][j].Labels, opts.Priorities)
+			if iPriority != jPriority {
+				return iPriority < jPriority // Lower index means higher priority
+			}
+			// If priorities are equal, sort by issue number
+			return issuesByCategory[category][i].Number < issuesByCategory[category][j].Number
+		})
+	}
+
+	// Get high priority issues (top 2 priority levels)
+	var highPriorityIssues []Issue
+	if len(opts.Priorities) >= 2 {
+		for _, issue := range issues {
+			level := getPriorityLevel(issue.Labels, opts.Priorities)
+			if level < 2 { // Only include top 2 priority levels
+				highPriorityIssues = append(highPriorityIssues, issue)
+			}
+		}
+		// Sort high priority issues by priority
+		sort.Slice(highPriorityIssues, func(i, j int) bool {
+			iPriority := getPriorityLevel(highPriorityIssues[i].Labels, opts.Priorities)
+			jPriority := getPriorityLevel(highPriorityIssues[j].Labels, opts.Priorities)
+			if iPriority != jPriority {
+				return iPriority < jPriority
+			}
+			return highPriorityIssues[i].Number < highPriorityIssues[j].Number
+		})
+	}
+
 	// Calculate progress
 	var progress float64
 	if totalIssues > 0 {
 		progress = float64(completedIssues) / float64(totalIssues) * 100
 	}
 
-	// Generate progress bar
-	progressBar := generateProgressBar(completedIssues, totalIssues, 20)
-
 	return TemplateData{
-		Milestone: milestone,
+		Milestone:           milestone,
+		Categories:          opts.Categories,
+		Issues:              issuesByCategory,
+		UncategorizedIssues: uncategorizedIssues,
+		HighPriorityIssues:  highPriorityIssues,
 		Stats: MilestoneStats{
 			TotalIssues:     totalIssues,
 			CompletedIssues: completedIssues,
 			Progress:        progress,
 			Contributors:    contributorsList,
 		},
-		Categories:          categories,
-		Issues:              issuesByCategory,
-		UncategorizedIssues: uncategorizedIssues,
-		ProgressBar:         progressBar,
+		ProgressBar: generateProgressBar(completedIssues, totalIssues, 20),
 	}
+}
+
+// getPriorityLevel returns the priority level of an issue based on its labels
+// Returns the index of the highest priority label found, or len(priorities) if no priority label is found
+func getPriorityLevel(labels []Label, priorities []string) int {
+	for _, label := range labels {
+		for i, priority := range priorities {
+			if strings.EqualFold(label.Name, priority) {
+				return i
+			}
+		}
+	}
+	return len(priorities)
 }
 
 // ListOpenMilestones returns a list of open milestones for the repository
