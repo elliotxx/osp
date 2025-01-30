@@ -1,51 +1,65 @@
-// Package log provides a simple logging package with support for hierarchical logging.
+// Package log provides a simple logging package with support for hierarchical logging and colors.
 //
-// The package supports four built-in log levels with their own prefix symbols:
-//   - Debug:   » (only shown when verbose mode is enabled)
-//   - Info:    +
-//   - Success: ✓
-//   - Error:   ×
+// The package supports four built-in log levels with their own prefix symbols and colors:
+//   - Debug:   » (light gray, only shown when verbose mode is enabled)
+//   - Info:    + (blue)
+//   - Success: ✓ (green)
+//   - Error:   × (red)
 //
 // The package also supports hierarchical logging with indentation levels and custom prefixes.
-// You can use L(level) to specify the indentation level (each level adds 2 spaces),
-// and P(prefix) to specify a custom prefix.
+// You can use:
+//   - L(level) to specify the indentation level (each level adds 2 spaces)
+//   - P(prefix) to specify a custom prefix
+//   - C(color) to specify a custom color
 //
 // Basic usage:
 //
-//	// Simple logging with built-in levels
+//	// Simple logging with built-in levels (with default colors)
 //	log.Info("Processing item %d", 1)
-//	// Output: + Processing item 1
+//	// Output: + Processing item 1 (in blue)
 //
-//	// Hierarchical logging with custom prefix
+//	// Hierarchical logging with custom prefix and colors
 //	log.Info("Found 2 items").
-//	    L(1).P("→").Log("Processing item 1").
+//	    L(1).P("→").C(log.ColorCyan).Log("Processing item 1").
 //	    L(1).Success("Item 1 processed").
-//	    L(1).P("→").Log("Processing item 2").
+//	    L(1).P("→").C(log.ColorCyan).Log("Processing item 2").
 //	    L(1).Error("Failed to process item 2")
 //	// Output:
-//	// + Found 2 items
-//	//   → Processing item 1
-//	//   ✓ Item 1 processed
-//	//   → Processing item 2
-//	//   × Failed to process item 2
+//	// + Found 2 items (in blue)
+//	//   → Processing item 1 (in cyan)
+//	//   ✓ Item 1 processed (in green)
+//	//   → Processing item 2 (in cyan)
+//	//   × Failed to process item 2 (in red)
 //
 //	// Debug logging (only shown when verbose mode is enabled)
 //	log.SetVerbose(true)
 //	log.Debug("Debug message")
-//	// Output: » Debug message
+//	// Output: » Debug message (in light gray)
 //
 // All logging functions return a new Logger pointer, allowing for method chaining:
 //
 //	// L(level) sets the indentation level
 //	// P(prefix) sets a custom prefix
-//	// Log() outputs message with current level and prefix
-//	log.L(1).P("→").Log("Message 1").Log("Message 2")
+//	// C(color) sets a custom color
+//	// Log() outputs message with current level, prefix and color
+//	log.L(1).P("→").C(log.ColorYellow).Log("Message 1").Log("Message 2")
 //	// Output:
-//	//   → Message 1
-//	//   → Message 2
+//	//   → Message 1 (in yellow)
+//	//   → Message 2 (in yellow)
 //
-// Each method (L, P, Log, etc.) returns a new Logger instance with the updated settings,
+// Each method (L, P, C, Log, etc.) returns a new Logger instance with the updated settings,
 // making it safe for concurrent use and allowing for flexible logging patterns.
+//
+// Available colors for use with C():
+//   - log.ColorReset  (reset to default color)
+//   - log.ColorRed    (red)
+//   - log.ColorGreen  (green)
+//   - log.ColorYellow (yellow)
+//   - log.ColorBlue   (blue)
+//   - log.ColorPurple (purple)
+//   - log.ColorCyan   (cyan)
+//   - log.ColorGray   (light gray)
+//   - log.StyleBold   (bold style)
 package log
 
 import (
