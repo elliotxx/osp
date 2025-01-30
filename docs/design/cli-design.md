@@ -159,27 +159,50 @@ OSP 支持以下全局参数：
 
 ## 日志级别
 
-OSP 使用不同的符号来标记不同级别的日志信息：
+OSP 使用不同的符号和颜色来标记不同级别的日志信息：
 
-- `»` 表示追踪信息
+- `»` 表示追踪信息 (浅灰色)
   - 仅在 verbose 模式下显示
   - 用于展示详细的执行步骤和中间状态
   - 例如：`» Found milestone: v1.0.0 (#1)`
 
-- `+` 表示正在执行的操作
+- `+` 表示正在执行的操作 (蓝色)
   - 默认显示
   - 用于提示用户当前正在进行的操作
   - 例如：`+ Updating existing planning issue #3`
 
-- `✓` 表示操作成功完成
+- `✓` 表示操作成功完成 (绿色)
   - 默认显示
   - 用于确认操作已经成功完成
   - 例如：`✓ Successfully updated planning issue #3`
 
-- `×` 表示操作失败
+- `×` 表示操作失败 (红色)
   - 默认显示
   - 用于提示用户操作失败和错误信息
   - 例如：`× Failed to get milestone: 404 Not Found`
+
+此外，OSP 还支持自定义日志格式：
+
+- 缩进级别：通过 `L(level)` 设置，每级缩进两个空格
+- 自定义前缀：通过 `P(prefix)` 设置，例如使用 `→` 表示处理步骤
+- 自定义颜色：通过 `C(color)` 设置，支持以下颜色：
+  - 红色 (ColorRed)
+  - 绿色 (ColorGreen)
+  - 黄色 (ColorYellow)
+  - 蓝色 (ColorBlue)
+  - 紫色 (ColorPurple)
+  - 青色 (ColorCyan)
+  - 灰色 (ColorGray)
+  - 加粗样式 (StyleBold)
+
+示例输出：
+```
++ Found 2 items
+  → Processing item 1
+  ✓ Item 1 processed
+  → Processing item 2
+  × Failed to process item 2
+```
 
 ## 未来扩展
 
