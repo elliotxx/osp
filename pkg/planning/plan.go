@@ -103,6 +103,8 @@ type TemplateData struct {
 	HighPriorityIssues  []Issue
 	ProgressBar         string
 	Priorities          []string
+	RepoOwner           string
+	RepoName            string
 }
 
 // askForConfirmation asks the user for confirmation
@@ -276,6 +278,11 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 
 // prepareTemplateData prepares data for the template
 func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, opts Options) TemplateData {
+	// Extract repo owner and name from the milestone URL
+	urlParts := strings.Split(milestone.HTMLURL, "/")
+	repoOwner := urlParts[3]
+	repoName := urlParts[4]
+
 	// Calculate statistics
 	totalIssues := len(issues)
 	completedIssues := 0
@@ -364,6 +371,8 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, opts 
 		HighPriorityIssues:  highPriorityIssues,
 		ProgressBar:         generateProgressBar(completedIssues, totalIssues, 20),
 		Priorities:          opts.Priorities,
+		RepoOwner:           repoOwner,
+		RepoName:            repoName,
 	}
 }
 
