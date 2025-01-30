@@ -104,9 +104,9 @@ build-windows: ## Build for Windows
 		$(GO) build -o ./_build/windows/$(APPROOT).exe \
 		.
 
-.PHONY: gen-cli-doc
-gen-cli-doc: ## Generate CLI Documentation
-	@$(GO) run ./hack/gen-cli-docs/main.go && echo "🎉 Done!"
+.PHONY: gen-docs
+gen-docs: ## Generate CLI Documentation
+	@$(GO) run ./hack/gen-docs/main.go -output docs/cli && echo "🎉 Done!"
 
 # Target: add-contributor
 # Description: Adds a new contributor to the project's list of contributors using the all-contributors-cli tool.

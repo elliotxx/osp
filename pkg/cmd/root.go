@@ -91,3 +91,8 @@ func runGitCommand(args ...string) (string, error) {
 	}
 	return string(output), nil
 }
+
+// GetRootCmd returns the root cobra command
+func GetRootCmd() *cobra.Command {
+	return rootCmd
+}
