@@ -6,6 +6,7 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/elliotxx/osp/pkg/config"
+	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/planning"
 	"github.com/elliotxx/osp/pkg/repo"
 	"github.com/spf13/cobra"
@@ -23,16 +24,11 @@ func newPlanCmd() *cobra.Command {
 		Short: "Generate and update community planning",
 		Long: `Generate and update community planning based on milestone issues.
 This command will create or update a planning issue that summarizes all issues
-in the specified milestone, categorized by their labels.`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Parse milestone number
-			var milestoneNumber int
-			_, err := fmt.Sscanf(args[0], "%d", &milestoneNumber)
-			if err != nil {
-				return fmt.Errorf("invalid milestone number: %w", err)
-			}
+in the specified milestone or all open milestones, categorized by their labels.
 
+If no milestone number is provided, it will scan all open milestones.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get GitHub client
 			client, err := api.DefaultRESTClient()
 			if err != nil {
@@ -69,10 +65,34 @@ in the specified milestone, categorized by their labels.`,
 				ExcludePR:     excludePR,
 			}
 
-			// Update planning
-			err = manager.Update(cmd.Context(), owner, repoName, milestoneNumber, opts)
+			// If milestone number is provided, update that specific milestone
+			if len(args) > 0 {
+				var milestoneNumber int
+				_, err := fmt.Sscanf(args[0], "%d", &milestoneNumber)
+				if err != nil {
+					return fmt.Errorf("invalid milestone number: %w", err)
+				}
+
+				return manager.Update(cmd.Context(), owner, repoName, milestoneNumber, opts)
+			}
+
+			// Otherwise, get all open milestones and update their planning
+			milestones, err := manager.ListOpenMilestones(cmd.Context(), owner, repoName)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list open milestones: %w", err)
+			}
+
+			if len(milestones) == 0 {
+				log.Info("No open milestones found")
+				return nil
+			}
+
+			log.Info("Found %d open milestones", len(milestones))
+			for _, m := range milestones {
+				if err := manager.Update(cmd.Context(), owner, repoName, m.Number, opts); err != nil {
+					log.Error("Failed to update planning for milestone %d: %v", m.Number, err)
+					continue
+				}
 			}
 
 			return nil

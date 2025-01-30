@@ -164,7 +164,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 
 	// Create or update planning issue
 	if planningIssue == nil {
-		log.Info("Creating new planning issue for milestone '%s'", milestone.Title)
+		log.Info("Creating new planning issue for milestone #%d (%s)", milestone.Number, milestone.Title)
 		// Create new issue
 		body := map[string]interface{}{
 			"title":  planningTitle,
@@ -182,7 +182,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		}
 		log.Success("Successfully created planning issue for milestone '%s'", milestone.Title)
 	} else {
-		log.Info("Updating existing planning issue #%d", planningIssue.Number)
+		log.Info("Updating existing planning issue #%d for milestone #%d (%s)", planningIssue.Number, milestone.Number, milestone.Title)
 		// Update existing issue
 		body := map[string]interface{}{
 			"body": content,
@@ -270,6 +270,19 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categ
 		UncategorizedIssues: uncategorizedIssues,
 		ProgressBar:         progressBar,
 	}
+}
+
+// ListOpenMilestones returns a list of open milestones for the repository
+func (m *Manager) ListOpenMilestones(ctx context.Context, owner, repo string) ([]Milestone, error) {
+	var milestones []Milestone
+	path := fmt.Sprintf("repos/%s/%s/milestones?state=open", owner, repo)
+
+	err := m.client.Get(path, &milestones)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list milestones: %w", err)
+	}
+
+	return milestones, nil
 }
 
 // generatePlanningContent generates the complete planning content using the template
