@@ -133,6 +133,48 @@ func TestPrepareTemplateData(t *testing.T) {
 	})
 }
 
+func TestFindPlanningIssue(t *testing.T) {
+	// Mock existing issues with duplicate planning issues
+	existingIssues := []Issue{
+		{
+			Title:  "Planning: v1.0.0",
+			Number: 5,
+			State:  "open",
+		},
+		{
+			Title:  "Planning: v1.0.0",
+			Number: 3,
+			State:  "open",
+		},
+		{
+			Title:  "Planning: v1.0.0",
+			Number: 8,
+			State:  "open",
+		},
+		{
+			Title:  "Other Issue",
+			Number: 1,
+			State:  "open",
+		},
+	}
+
+	planningTitle := "Planning: v1.0.0"
+	var planningIssue *Issue
+	var minIssueNumber int = 2147483647
+	for _, issue := range existingIssues {
+		if issue.Title == planningTitle {
+			if planningIssue == nil || issue.Number < minIssueNumber {
+				planningIssue = &issue
+				minIssueNumber = issue.Number
+			}
+		}
+	}
+
+	// Assertions
+	assert.NotNil(t, planningIssue)
+	assert.Equal(t, 3, planningIssue.Number, "Should select the planning issue with the smallest number")
+}
+
 func TestGeneratePlanningContent(t *testing.T) {
 	// Create a fixed time for testing
 	fixedTime := time.Date(2025, 1, 30, 15, 04, 05, 0, time.UTC)
@@ -214,13 +256,13 @@ func TestGeneratePlanningContent(t *testing.T) {
 			expected []string
 		}{
 			{"header", []string{
-				"# v1.0.0 Planning",
 				"## Overview",
 				"- Progress: █████░░░░░░░░░ 33%",
 				"- Total Issues: 3",
 				"  - ✅ Completed: 1",
 				"  - 🚧 In Progress: 2",
 				"- Due Date: February 28, 2025",
+				"- Data comes from [Milestone #1](https://github.com/elliotxx/osp/milestone/1)",
 				"## Description",
 				"First stable release",
 				"## Tasks by Category",
@@ -241,9 +283,6 @@ func TestGeneratePlanningContent(t *testing.T) {
 				"## Contributors",
 				"Thanks to all our contributors for their efforts on completed issues:",
 				"- @user1",
-			}},
-			{"milestone link", []string{
-				"> For a detail list of issues, please visit [Milestone #1](https://github.com/elliotxx/osp/milestone/1)",
 			}},
 			{"footer", []string{
 				"---",

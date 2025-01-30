@@ -141,11 +141,15 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		return fmt.Errorf("failed to get existing issues: %w", err)
 	}
 
+	planningTitle := fmt.Sprintf("Planning: %s", milestone.Title)
 	var planningIssue *Issue
+	var minIssueNumber int = 2147483647
 	for _, issue := range existingIssues {
-		if strings.Contains(issue.Title, fmt.Sprintf("Milestone %d", milestoneNumber)) {
-			planningIssue = &issue
-			break
+		if issue.Title == planningTitle {
+			if planningIssue == nil || issue.Number < minIssueNumber {
+				planningIssue = &issue
+				minIssueNumber = issue.Number
+			}
 		}
 	}
 
@@ -153,7 +157,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	if planningIssue == nil {
 		// Create new issue
 		body := map[string]interface{}{
-			"title":  fmt.Sprintf("Planning: %s", milestone.Title),
+			"title":  planningTitle,
 			"body":   content,
 			"labels": []string{opts.PlanningLabel},
 		}
