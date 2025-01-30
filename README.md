@@ -1,4 +1,4 @@
-# OSP - Open Source Pilot
+# OSP - Open Source Software Pilot
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/elliotxx/osp)](https://goreportcard.com/report/github.com/elliotxx/osp)
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
