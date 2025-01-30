@@ -303,11 +303,8 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, categ
 				if strings.EqualFold(label.Name, category) {
 					issuesByCategory[category] = append(issuesByCategory[category], issue)
 					categorized = true
-					break
+					// Don't break here, continue checking other categories
 				}
-			}
-			if categorized {
-				break
 			}
 		}
 		if !categorized {
