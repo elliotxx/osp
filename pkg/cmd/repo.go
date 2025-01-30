@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/elliotxx/osp/pkg/config"
+	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/repo"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ var repoAddCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return err
 		}
 
 		repoManager := repo.NewManager(cfg)
@@ -30,7 +31,7 @@ var repoAddCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("✓ Added repository %s\n", args[0])
+		log.Success("Successfully added repository %s", args[0])
 		return nil
 	},
 }
@@ -43,7 +44,7 @@ var repoRemoveCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return err
 		}
 
 		repoManager := repo.NewManager(cfg)
@@ -51,7 +52,7 @@ var repoRemoveCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("✓ Removed repository %s\n", args[0])
+		log.Success("Successfully removed repository %s", args[0])
 		return nil
 	},
 }
@@ -62,14 +63,14 @@ var repoListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return err
 		}
 
 		repoManager := repo.NewManager(cfg)
 		repos := repoManager.List()
 
 		if len(repos) == 0 {
-			fmt.Println("No repositories found.")
+			log.Info("No repositories found.")
 			return nil
 		}
 
@@ -94,7 +95,7 @@ var repoSwitchCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return err
 		}
 
 		repoManager := repo.NewManager(cfg)
@@ -102,7 +103,7 @@ var repoSwitchCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("✓ Switched to repository %s\n", args[0])
+		log.Success("Successfully switched to repository %s", args[0])
 		return nil
 	},
 }
@@ -113,14 +114,14 @@ var repoCurrentCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return err
 		}
 
 		repoManager := repo.NewManager(cfg)
 		current := repoManager.Current()
 
 		if current == "" {
-			fmt.Println("No repository selected.")
+			log.Info("No repository selected.")
 			return nil
 		}
 

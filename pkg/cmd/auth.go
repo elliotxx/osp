@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/elliotxx/osp/pkg/auth"
+	"github.com/elliotxx/osp/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +31,7 @@ func newAuthLoginCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Logged in with token: %s\n", token)
+			log.Success("Successfully logged in with token: %s", token)
 			return nil
 		},
 	}
@@ -49,10 +48,10 @@ func newAuthStatusCmd() *cobra.Command {
 				return err
 			}
 			if token == "" {
-				fmt.Println("× Not logged in")
+				log.Error("Not logged in")
 				return nil
 			}
-			fmt.Printf("✓ Logged in with token: %s\n", token)
+			log.Success("Logged in with token: %s", token)
 			return nil
 		},
 	}
@@ -67,7 +66,7 @@ func newAuthLogoutCmd() *cobra.Command {
 			if err := auth.Logout(); err != nil {
 				return err
 			}
-			fmt.Println("✓ Logged out")
+			log.Success("Successfully logged out")
 			return nil
 		},
 	}
