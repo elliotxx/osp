@@ -184,9 +184,9 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to create planning issue: %w", err)
 		}
-		log.Success("Successfully created planning issue for milestone '%s'", milestone.Title)
 		issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, response.Number)
-		log.L(1).Info("Planning issue URL: %s", issueURL)
+		log.Success("Successfully created planning issue for milestone '%s'", milestone.Title).
+			L(1).P("→").Log("Planning issue URL: %s", issueURL)
 	} else {
 		log.Info("Updating existing planning issue #%d for milestone #%d (%s)", planningIssue.Number, milestone.Number, milestone.Title)
 		// Update existing issue
@@ -202,9 +202,9 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to update planning issue: %w", err)
 		}
-		log.Success("Successfully updated planning issue #%d", planningIssue.Number)
 		issueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, planningIssue.Number)
-		log.L(1).Info("Planning issue URL: %s", issueURL)
+		log.Success("Successfully updated planning issue #%d", planningIssue.Number).
+			L(1).P("→").Log("Planning issue URL: %s", issueURL)
 	}
 
 	return nil

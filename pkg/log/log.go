@@ -1,32 +1,32 @@
 // Package log provides a simple logging package with support for hierarchical logging.
 //
-// The package supports four log levels: Debug, Info, Success, and Error.
-// Each log level has its own prefix symbol:
+// The package supports four built-in log levels with their own prefix symbols:
 //   - Debug:   » (only shown when verbose mode is enabled)
 //   - Info:    +
 //   - Success: ✓
 //   - Error:   ×
 //
-// The package also supports hierarchical logging with indentation levels.
-// You can use L(level) to specify the indentation level (each level adds 2 spaces).
+// The package also supports hierarchical logging with indentation levels and custom prefixes.
+// You can use L(level) to specify the indentation level (each level adds 2 spaces),
+// and P(prefix) to specify a custom prefix.
 //
 // Basic usage:
 //
-//	// Simple logging
+//	// Simple logging with built-in levels
 //	log.Info("Processing item %d", 1)
 //	// Output: + Processing item 1
 //
-//	// Hierarchical logging
+//	// Hierarchical logging with custom prefix
 //	log.Info("Found 2 items").
-//	    L(1).Info("Processing item 1").
+//	    L(1).P("→").Log("Processing item 1").
 //	    L(1).Success("Item 1 processed").
-//	    L(1).Info("Processing item 2").
+//	    L(1).P("→").Log("Processing item 2").
 //	    L(1).Error("Failed to process item 2")
 //	// Output:
 //	// + Found 2 items
-//	//   + Processing item 1
+//	//   → Processing item 1
 //	//   ✓ Item 1 processed
-//	//   + Processing item 2
+//	//   → Processing item 2
 //	//   × Failed to process item 2
 //
 //	// Debug logging (only shown when verbose mode is enabled)
@@ -34,16 +34,18 @@
 //	log.Debug("Debug message")
 //	// Output: » Debug message
 //
-// All logging functions return a Logger pointer, allowing for method chaining:
+// All logging functions return a new Logger pointer, allowing for method chaining:
 //
-//	log.Info("Starting process").
-//	    L(1).Info("Step 1").
-//	    L(2).Debug("Detail 1").
-//	    L(2).Debug("Detail 2").
-//	    L(1).Success("Step 1 completed")
+//	// L(level) sets the indentation level
+//	// P(prefix) sets a custom prefix
+//	// Log() outputs message with current level and prefix
+//	log.L(1).P("→").Log("Message 1").Log("Message 2")
+//	// Output:
+//	//   → Message 1
+//	//   → Message 2
 //
-// This is particularly useful for maintaining consistent indentation levels
-// throughout a process while keeping the code readable.
+// Each method (L, P, Log, etc.) returns a new Logger instance with the updated settings,
+// making it safe for concurrent use and allowing for flexible logging patterns.
 package log
 
 import (
@@ -54,9 +56,10 @@ var (
 	verbose bool
 )
 
-// Logger represents a logger with a specific indentation level
+// Logger represents a logger with a specific indentation level and prefix
 type Logger struct {
-	level int
+	level  int    // indentation level
+	prefix string // prefix symbol
 }
 
 // getIndent returns the current indentation string
@@ -68,20 +71,49 @@ func (l *Logger) getIndent() string {
 	return indentStr
 }
 
-// L creates a new Logger with the specified indentation level.
+// P sets a custom prefix for the logger and returns the logger.
+// The prefix will be used by subsequent Log calls.
+//
+// Example:
+//
+//	log.L(1).P("→").Log("Processing item")
+//	// Output:
+//	//   → Processing item
+func (l *Logger) P(prefix string) *Logger {
+	newLogger := *l
+	newLogger.prefix = prefix + " "
+	return &newLogger
+}
+
+// L sets the indentation level and returns a new logger.
 // Each level adds 2 spaces of indentation.
 //
 // Example:
 //
-//	log.Info("Parent").L(1).Info("Child")
+//	log.P("→").L(1).Log("Child message")
 //	// Output:
-//	// + Parent
-//	//   + Child
-func L(level int) *Logger {
-	return &Logger{level: level}
+//	//   → Child message
+func (l *Logger) L(level int) *Logger {
+	newLogger := *l
+	newLogger.level = level
+	return &newLogger
 }
 
-// Debug prints debug message if verbose is true and returns the logger.
+// Log prints message with current level and prefix, then returns a new logger.
+//
+// Example:
+//
+//	log.L(1).P("→").Log("Message 1").Log("Message 2")
+//	// Output:
+//	//   → Message 1
+//	//   → Message 2
+func (l *Logger) Log(format string, args ...interface{}) *Logger {
+	fmt.Printf(l.getIndent()+l.prefix+format+"\n", args...)
+	newLogger := *l
+	return &newLogger
+}
+
+// Debug prints debug message if verbose is true and returns a new logger.
 // Debug messages are prefixed with "»" and are only shown when verbose mode is enabled.
 //
 // Example:
@@ -90,13 +122,15 @@ func L(level int) *Logger {
 //	log.Debug("Processing data")
 //	// Output: » Processing data
 func (l *Logger) Debug(format string, args ...interface{}) *Logger {
+	newLogger := *l
+	newLogger.prefix = "» "
 	if verbose {
-		fmt.Printf(l.getIndent()+"» "+format+"\n", args...)
+		fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
 	}
-	return l
+	return &newLogger
 }
 
-// Info prints info message and returns the logger.
+// Info prints info message and returns a new logger.
 // Info messages are prefixed with "+".
 //
 // Example:
@@ -104,11 +138,13 @@ func (l *Logger) Debug(format string, args ...interface{}) *Logger {
 //	log.Info("Processing %d items", 5)
 //	// Output: + Processing 5 items
 func (l *Logger) Info(format string, args ...interface{}) *Logger {
-	fmt.Printf(l.getIndent()+"+ "+format+"\n", args...)
-	return l
+	newLogger := *l
+	newLogger.prefix = "+ "
+	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	return &newLogger
 }
 
-// Success prints success message and returns the logger.
+// Success prints success message and returns a new logger.
 // Success messages are prefixed with "✓".
 //
 // Example:
@@ -116,11 +152,13 @@ func (l *Logger) Info(format string, args ...interface{}) *Logger {
 //	log.Success("All items processed")
 //	// Output: ✓ All items processed
 func (l *Logger) Success(format string, args ...interface{}) *Logger {
-	fmt.Printf(l.getIndent()+"✓ "+format+"\n", args...)
-	return l
+	newLogger := *l
+	newLogger.prefix = "✓ "
+	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	return &newLogger
 }
 
-// Error prints error message and returns the logger.
+// Error prints error message and returns a new logger.
 // Error messages are prefixed with "×".
 //
 // Example:
@@ -128,8 +166,10 @@ func (l *Logger) Success(format string, args ...interface{}) *Logger {
 //	log.Error("Failed to process item: %v", err)
 //	// Output: × Failed to process item: connection refused
 func (l *Logger) Error(format string, args ...interface{}) *Logger {
-	fmt.Printf(l.getIndent()+"× "+format+"\n", args...)
-	return l
+	newLogger := *l
+	newLogger.prefix = "× "
+	fmt.Printf(newLogger.getIndent()+newLogger.prefix+format+"\n", args...)
+	return &newLogger
 }
 
 // SetVerbose sets the verbose flag.
@@ -139,24 +179,58 @@ func SetVerbose(v bool) {
 	verbose = v
 }
 
-// Global functions that return a logger with level 0
+// Global functions that return a new logger
 
-// Debug is a convenience function that creates a level 0 logger and calls Debug.
+// New creates a new logger with default settings (level 0, no prefix)
+func New() *Logger {
+	return &Logger{}
+}
+
+// L sets the indentation level and returns a new logger.
+// Each level adds 2 spaces of indentation.
+//
+// Example:
+//
+//	log.L(1).P("→").Log("Child message")
+//	// Output:
+//	//   → Child message
+func L(level int) *Logger {
+	return &Logger{level: level}
+}
+
+// P sets a custom prefix for the logger and returns a new logger.
+// The prefix will be used by subsequent Log calls.
+//
+// Example:
+//
+//	log.L(1).P("→").Log("Child message")
+//	// Output:
+//	//   → Child message
+func P(prefix string) *Logger {
+	return &Logger{prefix: prefix}
+}
+
+// Log is a convenience function that creates a new logger and calls Log.
+func Log(format string, args ...interface{}) *Logger {
+	return New().Log(format, args...)
+}
+
+// Debug is a convenience function that creates a new logger and calls Debug.
 func Debug(format string, args ...interface{}) *Logger {
-	return L(0).Debug(format, args...)
+	return New().Debug(format, args...)
 }
 
-// Info is a convenience function that creates a level 0 logger and calls Info.
+// Info is a convenience function that creates a new logger and calls Info.
 func Info(format string, args ...interface{}) *Logger {
-	return L(0).Info(format, args...)
+	return New().Info(format, args...)
 }
 
-// Success is a convenience function that creates a level 0 logger and calls Success.
+// Success is a convenience function that creates a new logger and calls Success.
 func Success(format string, args ...interface{}) *Logger {
-	return L(0).Success(format, args...)
+	return New().Success(format, args...)
 }
 
-// Error is a convenience function that creates a level 0 logger and calls Error.
+// Error is a convenience function that creates a new logger and calls Error.
 func Error(format string, args ...interface{}) *Logger {
-	return L(0).Error(format, args...)
+	return New().Error(format, args...)
 }
