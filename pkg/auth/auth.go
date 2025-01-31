@@ -106,44 +106,59 @@ func Logout() error {
 // GetToken returns the stored GitHub token
 func GetToken() (string, error) {
 	// Try to get token from environment variables first
+	log.Debug("Checking environment variables for token...")
 	if token := os.Getenv("GH_TOKEN"); token != "" {
+		log.Debug("Found token in GH_TOKEN")
 		return token, nil
 	}
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		log.Debug("Found token in GITHUB_TOKEN")
 		return token, nil
 	}
 
+	log.Debug("No token found in environment variables, checking stored credentials...")
 	username, err := getStoredUsername()
 	if err != nil {
+		log.Debug("Failed to get stored username: %v", err)
 		return "", fmt.Errorf("failed to get stored username: %w", err)
 	}
 
 	// Try to get token from keyring
+	log.Debug("Attempting to get token from keyring for user %s...", username)
 	token, err := keyring.Get(serviceName, username)
 	if err == nil {
+		log.Debug("Successfully retrieved token from keyring")
 		return token, nil
 	}
+	log.Debug("Failed to get token from keyring: %v", err)
 
 	// If keyring is not available, try config file
+	log.Debug("Keyring not available, trying config file...")
 	configDir, err := getConfigDir()
 	if err != nil {
+		log.Debug("Failed to get config directory: %v", err)
 		return "", err
 	}
 
 	tokenFile := filepath.Join(configDir, "token")
+	log.Debug("Attempting to read token from file: %s", tokenFile)
 	data, err := os.ReadFile(tokenFile)
 	if err != nil {
+		log.Debug("Failed to read token file: %v", err)
 		return "", fmt.Errorf("no authentication token found, please run 'osp auth login' first")
 	}
 
+	log.Debug("Successfully read token from file")
 	return strings.TrimSpace(string(data)), nil
 }
 
 // GetStatus returns the current authentication status
 func GetStatus() ([]*Status, error) {
+	log.Debug("Checking authentication status...")
 	statuses := make([]*Status, 0, 2)
 
 	// Check environment variables first
+	log.Debug("Checking environment variables...")
 	envTokens := map[string]string{
 		"GITHUB_TOKEN": os.Getenv("GITHUB_TOKEN"),
 		"GH_TOKEN":     os.Getenv("GH_TOKEN"),
@@ -151,19 +166,27 @@ func GetStatus() ([]*Status, error) {
 
 	for envName, token := range envTokens {
 		if token == "" {
+			log.Debug("No token found in %s", envName)
 			continue
 		}
+		log.Debug("Found token in %s, validating...", envName)
 
 		// Get username from API
 		username, err := getUserInfo(token)
 		if err != nil {
+			log.Debug("Failed to validate token from %s: %v", envName, err)
 			continue // Skip invalid token
 		}
+		log.Debug("Token validated for user %s", username)
 
 		// Get token scopes
+		log.Debug("Getting token scopes...")
 		scopes, err := getTokenScopes(token)
 		if err != nil {
+			log.Debug("Failed to get token scopes: %v", err)
 			scopes = []string{"unknown"}
+		} else {
+			log.Debug("Token scopes: %v", scopes)
 		}
 
 		statuses = append(statuses, &Status{
@@ -178,15 +201,23 @@ func GetStatus() ([]*Status, error) {
 	}
 
 	// Then check stored token
+	log.Debug("Checking stored credentials...")
 	username, err := getStoredUsername()
 	if err == nil {
+		log.Debug("Found stored username: %s", username)
 		// Try keyring first
+		log.Debug("Attempting to get token from keyring...")
 		token, err := keyring.Get(serviceName, username)
 		if err == nil {
+			log.Debug("Successfully retrieved token from keyring")
 			// Get token scopes
+			log.Debug("Getting token scopes...")
 			scopes, err := getTokenScopes(token)
 			if err != nil {
+				log.Debug("Failed to get token scopes: %v", err)
 				scopes = []string{"unknown"}
+			} else {
+				log.Debug("Token scopes: %v", scopes)
 			}
 
 			statuses = append(statuses, &Status{
@@ -199,37 +230,49 @@ func GetStatus() ([]*Status, error) {
 				Active:       len(statuses) == 0, // Active only if no env token
 			})
 		} else {
+			log.Debug("Failed to get token from keyring: %v", err)
 			// Try config file
+			log.Debug("Attempting to get token from config file...")
 			configDir, err := getConfigDir()
-			if err == nil {
-				tokenFile := filepath.Join(configDir, "token")
-				data, err := os.ReadFile(tokenFile)
-				if err == nil {
-					token := strings.TrimSpace(string(data))
-					// Get token scopes
-					scopes, err := getTokenScopes(token)
-					if err != nil {
-						scopes = []string{"unknown"}
-					}
-
-					statuses = append(statuses, &Status{
-						Username:     username,
-						Token:        token,
-						TokenDisplay: token[:3] + strings.Repeat("*", 37),
-						StorageType:  "file",
-						IsKeyring:    false,
-						Scopes:       scopes,
-						Active:       len(statuses) == 0, // Active only if no env token
-					})
-				}
+			if err != nil {
+				log.Debug("Failed to get config directory: %v", err)
+				return statuses, nil
 			}
+
+			tokenFile := filepath.Join(configDir, "token")
+			data, err := os.ReadFile(tokenFile)
+			if err != nil {
+				log.Debug("Failed to read token file: %v", err)
+				return statuses, nil
+			}
+			token := strings.TrimSpace(string(data))
+			log.Debug("Successfully read token from file")
+
+			// Get token scopes
+			log.Debug("Getting token scopes...")
+			scopes, err := getTokenScopes(token)
+			if err != nil {
+				log.Debug("Failed to get token scopes: %v", err)
+				scopes = []string{"unknown"}
+			} else {
+				log.Debug("Token scopes: %v", scopes)
+			}
+
+			statuses = append(statuses, &Status{
+				Username:     username,
+				Token:        token,
+				TokenDisplay: token[:3] + strings.Repeat("*", 37),
+				StorageType:  "config file",
+				IsKeyring:    false,
+				Scopes:       scopes,
+				Active:       len(statuses) == 0, // Active only if no env token
+			})
 		}
+	} else {
+		log.Debug("No stored username found: %v", err)
 	}
 
-	if len(statuses) == 0 {
-		return nil, fmt.Errorf("no authentication token found, please run 'osp auth login' first")
-	}
-
+	log.Debug("Found %d authentication methods", len(statuses))
 	return statuses, nil
 }
 
