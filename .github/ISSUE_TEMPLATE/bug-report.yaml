@@ -33,12 +33,12 @@ body:
   - type: textarea
     id: OSPVersion
     attributes:
-      label: osp version
+      label: OSP version
       value: |
         <details>
 
         ```bash
-        $ osp version
+        $ osp -V
         # paste output here
         ```
 

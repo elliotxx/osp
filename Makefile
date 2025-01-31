@@ -67,7 +67,7 @@ build-all: build-darwin build-linux build-windows ## Build for all platforms
 #   make build-darwin
 #   make build-darwin GOARCH=arm64
 .PHONY: build-darwin
-build-darwin: ## Build for MacOS (Darwin)
+build-darwin: gen-version ## Build for MacOS (Darwin)
 	@rm -rf ./_build/darwin
 	@echo "🚀 Building osp for darwin platform ..."
 	GOOS=darwin GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \
@@ -82,7 +82,7 @@ build-darwin: ## Build for MacOS (Darwin)
 #   make build-linux
 #   make build-linux GOARCH=arm64
 .PHONY: build-linux
-build-linux: ## Build for Linux
+build-linux: gen-version ## Build for Linux
 	@rm -rf ./_build/linux
 	@echo "🚀 Building osp for linux platform ..."
 	GOOS=linux GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \
@@ -97,7 +97,7 @@ build-linux: ## Build for Linux
 #   make build-windows
 #   make build-windows GOARCH=arm64
 .PHONY: build-windows
-build-windows: ## Build for Windows
+build-windows: gen-version ## Build for Windows
 	@rm -rf ./_build/windows
 	@echo "🚀 Building osp for windows platform ..."
 	GOOS=windows GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) \

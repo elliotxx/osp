@@ -1,15 +1,18 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/elliotxx/osp/pkg/log"
+	v "github.com/elliotxx/osp/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 var (
 	verbose bool
 	noColor bool
+	version bool
 	rootCmd = &cobra.Command{
 		Use:   "osp",
 		Short: "Open Source Project Management Tool",
@@ -21,13 +24,20 @@ It helps you manage issues, milestones, planning, and more.`,
 			log.SetVerbose(verbose)
 			log.SetNoColor(noColor)
 		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if version {
+				fmt.Println(v.GetVersion())
+				return
+			}
+		},
 	}
 )
 
 func init() {
 	// Add global flags
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
+	rootCmd.PersistentFlags().BoolVarP(&version, "version", "V", false, "Version output")
 
 	rootCmd.AddCommand(
 		newAuthCmd(),
