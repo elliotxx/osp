@@ -123,5 +123,5 @@ jobs:
           version: latest
           args: release --clean --config .goreleaser/${{ env.GO_RELEASER_CONFIG }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
