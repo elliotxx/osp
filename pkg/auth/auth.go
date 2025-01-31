@@ -140,12 +140,14 @@ func HasToken() bool {
 
 // GetStatus returns the current authentication status
 func GetStatus() (*Status, error) {
-	username, err := getStoredUsername()
+	// Get token
+	token, err := GetToken()
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := GetToken()
+	// Get username
+	username, err := getStoredUsername()
 	if err != nil {
 		return nil, err
 	}
@@ -153,27 +155,46 @@ func GetStatus() (*Status, error) {
 	// Get token scopes
 	scopes, err := getTokenScopes(token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get token scopes: %w", err)
+		return nil, err
 	}
 
-	// Check if token is stored in keyring
+	// Check if using keyring
+	isKeyring := true
 	_, err = keyring.Get(serviceName, username)
-	isKeyring := err == nil
+	if err != nil {
+		isKeyring = false
+	}
+
+	// Format token display
+	tokenDisplay := "none"
+	if token != "" {
+		tokenDisplay = token[:3] + strings.Repeat("*", 37)
+	}
+
+	// Format storage type
+	storageType := "file"
+	if isKeyring {
+		storageType = "keyring"
+	}
 
 	return &Status{
-		Username:  username,
-		Token:     token,
-		Scopes:    scopes,
-		IsKeyring: isKeyring,
+		Username:     username,
+		Token:        token,
+		TokenDisplay: tokenDisplay,
+		StorageType:  storageType,
+		IsKeyring:    isKeyring,
+		Scopes:       scopes,
 	}, nil
 }
 
-// Status represents the authentication status
+// Status represents the current authentication status
 type Status struct {
-	Username  string
-	Token     string
-	Scopes    []string
-	IsKeyring bool
+	Username     string
+	Token        string
+	TokenDisplay string // Token with most characters masked
+	StorageType  string // "keyring" or "file"
+	IsKeyring    bool
+	Scopes       []string
 }
 
 // getUserInfo gets the GitHub user information using the token

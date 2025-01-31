@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/spf13/cobra"
@@ -12,8 +13,23 @@ func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
 		Short: "Authenticate with GitHub",
-		Long: `Authenticate with GitHub using GitHub CLI's authentication.
-This command will help you set up authentication for OSP.`,
+		Long: heredoc.Docf(`
+			Authenticate with GitHub.
+
+			The default authentication mode is a web-based browser flow using GitHub's OAuth device flow.
+			After completion, an authentication token will be stored securely in the system credential store.
+			If a credential store is not found, the token will be stored in a plain text file.
+
+			You can also authenticate by setting the %[1]sGH_TOKEN%[1]s environment variable
+			to a personal access token.
+		`, "`"),
+		Example: heredoc.Doc(`
+			# Start interactive setup
+			$ osp auth login
+
+			# Check authentication status
+			$ osp auth status
+		`),
 	}
 
 	cmd.AddCommand(newAuthLoginCmd())
@@ -24,58 +40,70 @@ This command will help you set up authentication for OSP.`,
 }
 
 func newAuthLoginCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Login to GitHub",
-		Long:  "Login to GitHub using GitHub CLI's authentication.",
+		Short: "Log in to a GitHub account",
+		Long: heredoc.Doc(`
+			Log in to a GitHub account.
+
+			This command will help you authenticate with GitHub using a web-based browser flow.
+			A one-time code will be displayed, which you can enter at the specified URL to complete
+			the authentication process.
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.SetNoColor(true)
+			defer log.SetNoColor(false)
 			_, err := auth.Login()
 			return err
 		},
 	}
+
+	return cmd
 }
 
 func newAuthStatusCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show authentication status",
-		Long:  "Show current GitHub authentication status.",
+		Short: "View authentication status",
+		Long: heredoc.Doc(`
+			Verifies and displays information about your authentication state.
+
+			This command will test your authentication state and report whether you are properly
+			authenticated. It will also display information about the authenticated user and token.
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.SetNoColor(true)
+			defer log.SetNoColor(false)
+
 			status, err := auth.GetStatus()
 			if err != nil {
 				return err
 			}
 
-			// Format token for display
-			tokenDisplay := "none"
-			if status.Token != "" {
-				tokenDisplay = status.Token[:3] + strings.Repeat("*", 37)
-			}
-
-			// Format storage type
-			storageType := "file"
-			if status.IsKeyring {
-				storageType = "keyring"
-			}
-
 			// Print status
 			log.B().Log("github.com")
-			log.L(1).Success("Logged in to github.com account %s (%s)\n", log.Bold(status.Username), storageType)
+			log.L(1).Success("Logged in to github.com account %s (%s)", log.Bold(status.Username), status.StorageType)
 			log.L(1).Info("Active account: %s", log.Bold("true"))
-			log.L(1).Info("Token: %s", log.Bold(tokenDisplay))
+			log.L(1).Info("Token: %s", log.Bold(status.TokenDisplay))
 			if len(status.Scopes) > 0 {
 				log.L(1).Info("Token scopes: '%s'", log.Bold(strings.Join(status.Scopes, "', '")))
 			}
 			return nil
 		},
 	}
+
+	return cmd
 }
 
 func newAuthLogoutCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "logout",
-		Short: "Logout from GitHub",
-		Long:  "Logout from GitHub and remove stored credentials.",
+		Short: "Log out from a GitHub account",
+		Long: heredoc.Doc(`
+			Remove authentication for a GitHub account.
+
+			This command removes the authentication token from your system.
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := auth.Logout(); err != nil {
 				return err
@@ -84,4 +112,6 @@ func newAuthLogoutCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
 }

@@ -3,6 +3,7 @@ module github.com/elliotxx/osp
 go 1.22.5
 
 require (
+	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/cli/go-gh/v2 v2.11.2
 	github.com/cli/oauth v1.2.0
 	github.com/spf13/cobra v1.8.1
@@ -14,7 +15,6 @@ require (
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/cli/browser v1.3.0 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
