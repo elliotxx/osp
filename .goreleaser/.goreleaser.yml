@@ -1,3 +1,5 @@
+version: 2
+
 # This is an example .goreleaser.yml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 
@@ -160,24 +162,46 @@ docker_manifests:
       - "elliotxx/{{ .ProjectName }}:{{ .Tag }}-arm64"
 
 brews:
-  - tap:
+  - repository:
       owner: elliotxx
       name: homebrew-tap
-      # token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
 
+    # Template for the url which is determined by the given Token (github or gitlab)
     url_template: "https://github.com/elliotxx/osp/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    download_strategy: CurlDownloadStrategy
 
     # Git author used to commit to the repository.
-    # Defaults are shown.
     commit_author:
       name: GoReleaser Bot
       email: goreleaser@carlosbecker.com
 
-    folder: HomebrewFormula
+    # The project name and current git tag are used in the format string.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+
+    # Folder inside the repository to put the formula.
+    folder: Formula
+
+    # Your app's homepage.
     homepage: "https://github.com/elliotxx/osp"
+
+    # Your app's description.
     description: "Open Source Software Pilot"
+
+    # SPDX identifier of your app's license.
     license: "MIT"
+
+    # Setting this will prevent goreleaser to actually try to commit the updated
+    # formula - instead, the formula file will be stored on the dist folder only,
+    # leaving the responsibility of publishing it to the user.
     skip_upload: false
+
+    # Custom install script for brew.
+    install: |
+      bin.install "osp"
+
+    # Custom test script for brew.
     test: |
-      system "#{bin}/osp -V"
+      system "#{bin}/osp --version"
+
+    # Specify for which build to create a brew formula.
+    ids:
+    - osp
