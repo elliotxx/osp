@@ -396,7 +396,7 @@ func getStoredUsername() (string, error) {
 	usernameFile := filepath.Join(configDir, "username")
 	data, err := os.ReadFile(usernameFile)
 	if err != nil {
-		return "", fmt.Errorf("no stored username found, please run 'osp auth login' first")
+		return "", fmt.Errorf("no stored username found")
 	}
 
 	username := strings.TrimSpace(string(data))
