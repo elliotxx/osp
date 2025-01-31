@@ -120,7 +120,7 @@ func (m *Manager) getRepository(ctx context.Context, repoName string) (*Reposito
 
 	// Make request
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s", parts[0], parts[1])
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

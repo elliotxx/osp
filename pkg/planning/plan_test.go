@@ -168,7 +168,7 @@ func TestFindPlanningIssue(t *testing.T) {
 
 	planningTitle := "Planning: v1.0.0"
 	var planningIssue *Issue
-	var minIssueNumber int = 2147483647
+	minIssueNumber := 2147483647
 	for _, issue := range existingIssues {
 		if issue.Title == planningTitle {
 			if planningIssue == nil || issue.Number < minIssueNumber {

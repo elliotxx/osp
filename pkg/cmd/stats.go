@@ -10,6 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	outputFormatJSON = "json"
+)
+
 var statsCmd = &cobra.Command{
 	Use:   "stats",
 	Short: "Repository statistics",
@@ -46,7 +50,7 @@ var statsShowCmd = &cobra.Command{
 
 		// Output stats
 		switch strings.ToLower(format) {
-		case "json":
+		case outputFormatJSON:
 			data, err := json.MarshalIndent(stats, "", "  ")
 			if err != nil {
 				return err
@@ -102,7 +106,7 @@ var starHistoryCmd = &cobra.Command{
 
 		// Output history
 		switch strings.ToLower(format) {
-		case "json":
+		case outputFormatJSON:
 			data, err := json.MarshalIndent(history, "", "  ")
 			if err != nil {
 				return err

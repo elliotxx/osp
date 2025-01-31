@@ -299,7 +299,7 @@ func (m *Manager) prepareTemplateData(milestone Milestone, issues []Issue, opts 
 	}
 
 	// Get unique contributors
-	var contributorsList []string
+	contributorsList := make([]string, 0, len(contributors))
 	for contributor := range contributors {
 		contributorsList = append(contributorsList, contributor)
 	}

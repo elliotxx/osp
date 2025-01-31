@@ -41,7 +41,7 @@ func NewManager(cfg *config.Config) *Manager {
 // Get returns repository statistics
 func (m *Manager) Get(ctx context.Context, repoName string) (*Stats, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s", repoName)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
