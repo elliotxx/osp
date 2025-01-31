@@ -17,15 +17,25 @@ OSP (Open Source Pilot) 是一个自动化的开源软件管理工具，它帮�
 - [ ] 📝 自动生成新手任务
 - [ ] 📅 社区动态聚合
 
-## 快速开始
+## 🚀 安装
 
-### 安装
+更多安装方式请参考 [高级安装指南](docs/guide/advanced-installation.md)。
+
+### 🐙 Go 安装
 
 ```bash
 go install github.com/elliotxx/osp@latest
 ```
 
-### 基本使用
+### 🍺 Homebrew 安装
+
+通过 Homebrew 安装：
+```bash
+brew tap elliotxx/tap
+brew install osp
+```
+
+## 基本使用
 
 1. 登录 GitHub
 ```bash
@@ -61,9 +71,9 @@ osp plan <milestone-number> --label planning --categories bug,documentation,enha
 
 ## 文档
 
-- [使用文档](docs/usage/README.md) - 安装和使用指南
+- [使用指南](docs/guide/README.md) -  使用指南
 - [设计文档](docs/design/README.md) - 架构和实现细节
-- [API 文档](docs/api/README.md) - API 参考
+- [CLI 参考文档](docs/cli/osp.md) - CLI 参考文档
 
 ## 贡献
 
