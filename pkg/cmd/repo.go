@@ -68,6 +68,7 @@ var repoListCmd = &cobra.Command{
 
 		repoManager := repo.NewManager(cfg)
 		repos := repoManager.List()
+		current := repoManager.Current()
 
 		if len(repos) == 0 {
 			log.Info("No repositories found.")
@@ -76,7 +77,7 @@ var repoListCmd = &cobra.Command{
 
 		fmt.Println("Managed repositories:")
 		for _, r := range repos {
-			if r == cfg.Current {
+			if r == current {
 				fmt.Printf("* %s\n", r)
 			} else {
 				fmt.Printf("  %s\n", r)
