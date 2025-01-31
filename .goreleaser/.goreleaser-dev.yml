@@ -1,0 +1,81 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+    - make gen-version
+
+builds:
+  - id: "osp"
+    env:
+      - CGO_ENABLED=0
+    # GOOS list to build for.
+    # For more info refer to: https://golang.org/doc/install/source#environment
+    #
+    # Default: [ 'darwin', 'linux', 'windows' ]
+    goos:
+      - linux
+      # - windows
+      - darwin
+    # GOARCH to build for.
+    # For more info refer to: https://golang.org/doc/install/source#environment
+    #
+    # Default: [ '386', 'amd64', 'arm64' ]
+    goarch:
+      - amd64
+      - arm64
+    # By using ldflags="-s -w", the symbol table and debug information are removed to decrease the size of the release package.
+    ldflags:
+      - -s -w
+    main: .
+    binary: osp
+
+release:
+  disable: true
+
+# Reference:
+# - https://blog.goreleaser.com/goreleaser-and-docker-manifests-9fe167acf21e
+# - https://goreleaser.com/cookbooks/multi-platform-docker-images/#creating-multi-platform-docker-images-with-goreleaser
+dockers:
+- image_templates:
+  - 'elliotxx/{{ .ProjectName }}:{{ .Tag }}-amd64'
+  dockerfile: Dockerfile
+  use: docker
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/amd64"
+  goarch: amd64
+  extra_files:
+  - pkg/version/VERSION
+- image_templates:
+  - 'elliotxx/{{ .ProjectName }}:{{ .Tag }}-arm64'
+  dockerfile: Dockerfile
+  use: docker
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/arm64"
+  goarch: arm64
+  extra_files:
+  - pkg/version/VERSION
+
+docker_manifests:
+  - name_template: "elliotxx/{{ .ProjectName }}:{{ .Tag }}"
+    image_templates:
+      - "elliotxx/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "elliotxx/{{ .ProjectName }}:{{ .Tag }}-arm64"
+  - name_template: "elliotxx/{{ .ProjectName }}:latest"
+    image_templates:
+      - "elliotxx/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "elliotxx/{{ .ProjectName }}:{{ .Tag }}-arm64"

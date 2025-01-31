@@ -1,0 +1,107 @@
+# This file contains all available configuration options
+# with their default values.
+# For complete .golangci.yml configuration, reference: https://golangci-lint.run/usage/configuration/#config-file
+
+# options for analysis running
+run:
+  timeout: 8m
+  go: '1.22'
+
+linters:
+  disable-all: true
+  enable: # please keep this alphabetized
+    - bodyclose     # Checks whether HTTP response body is closed successfully
+    - contextcheck  # Check whether the function uses a non-inherited context
+    - dogsled      # Checks assignments with too many blank identifiers (e.g. x, _, _, _, := f())
+    - errorlint    # Find code that will cause problems with the error wrapping scheme
+    - errname      # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
+    - copyloopvar  # Checks for range loop variables that are used after the loop in goroutines
+    - forbidigo    # Forbids identifiers
+    - gocritic     # Provides diagnostics that check for bugs, performance and style issues
+    - goconst      # Finds repeated strings that could be replaced by a constant
+    - gofumpt      # Checks whether code was gofumpt-ed
+    - gosimple     # Specializes in simplifying code
+    - ineffassign  # Detects when assignments to existing variables are not used
+    - loggercheck  # Checks key value pairs for common logger libraries
+    - misspell     # Finds commonly misspelled English words
+    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil
+    - nilnil       # Checks that there is no simultaneous return of nil error and an invalid value
+    - nolintlint   # Reports ill-formed or insufficient nolint directives
+    - prealloc     # Finds slice declarations that could potentially be pre-allocated
+    - predeclared  # Finds code that shadows one of Go's predeclared identifiers
+    - staticcheck  # Go static analysis
+    - stylecheck   # Stylecheck is a replacement for golint
+    - tagliatelle  # Checks the struct tags case
+    - tenv        # tenv is analyzer that detects using os.Setenv instead of t.Setenv since Go1.17
+    - thelper     # thelper detects golang test helpers without t.Helper() call
+    - tparallel    # Detects inappropriate usage of t.Parallel() method in your Go test codes
+    - unconvert    # Remove unnecessary type conversions
+    - unparam      # Reports unused function parameters
+    - unused       # Checks Go code for unused constants, variables, functions and types
+    - usestdlibvars # Detects the possibility to use variables/constants from the Go standard library
+    - whitespace   # Tool for detection of leading and trailing whitespace
+
+linters-settings:
+  gofumpt:
+    extra-rules: false
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
+        json: goCamel
+        yaml: goCamel
+        xml: goCamel
+        toml: goCamel
+  errorlint:
+    # Check whether fmt.Errorf uses the %w verb for formatting errors
+    errorf: false
+  govet:
+    enable:
+      - asmdecl
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - cgocall
+      - composites
+      - copylocks
+      - errorsas
+      - fieldalignment
+      - framepointer
+      - httpresponse
+      - ifaceassert
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shift
+      - stdmethods
+      - stringintconv
+      - structtag
+      - testinggoroutine
+      - tests
+      - unmarshal
+      - unreachable
+      - unsafeptr
+      - unusedresult
+    disable:
+      - buildssa
+      - fieldalignment
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - path: \.pb\.go
+      linters:
+        - all
+  exclude-dirs:
+    - "hack"                     # Scripts and tools
+    - vendor                     # Third-party dependencies
+    - third_party               # Third-party code
+    - test                      # Test files

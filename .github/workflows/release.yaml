@@ -1,0 +1,127 @@
+# Reference from:
+# https://goreleaser.com/ci/actions/
+name: Release
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  Test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Running go tests with coverage
+        env:
+          GO111MODULE: on
+        run: make cover
+
+  GolangLint:
+    name: Golang Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.0
+          skip-cache: true
+          args: >
+            --timeout=10m
+            --verbose
+            --max-issues-per-linter=0
+            --max-same-issues=0
+
+  # Lints Pull Request commits with commitlint.
+  #
+  # Rules can be referenced:
+  # https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional
+  CommitLint:
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v5
+
+  # Release the artifacts, release note and images.
+  Release:
+    runs-on: ubuntu-latest
+    # needs: [Test, GolangLint, CommitLint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if on tag
+        run: |
+          if [[ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]]; then
+            echo "Running on tag ${GITHUB_REF#refs/tags/}"
+          else
+            echo "Not running on a tag"
+          fi
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Determine GoReleaser Config with Regex
+        run: |
+          tag=${GITHUB_REF#refs/tags/}
+          alpha='v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+'
+          beta='v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
+          rc='v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+          release='v[0-9]+.[0-9]+.[0-9]+'
+          if [[ $tag =~ $alpha ]] || [[ $tag =~ $beta ]]; then
+            echo "Match found for alpha or beta tag"
+            echo "GO_RELEASER_CONFIG=.goreleaser-dev.yml" >> $GITHUB_ENV
+          elif [[ $tag =~ $rc ]] || [[ $tag =~ $release ]]; then
+            echo "Match found for rc or release tag"
+            echo "GO_RELEASER_CONFIG=.goreleaser.yml" >> $GITHUB_ENV
+          else
+            echo "No match found"
+            exit 1
+          fi
+
+      - name: Release the osp with GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --config .goreleaser/${{ env.GO_RELEASER_CONFIG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
