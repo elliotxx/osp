@@ -143,7 +143,7 @@ func init() {
 	// Add flags
 	taskGenerateCmd.Flags().String("format", "text", "Output format (text, json)")
 	taskGenerateCmd.Flags().String("category", "", "Task category filter")
-	
+
 	taskListCmd.Flags().String("format", "text", "Output format (text, json)")
 	taskListCmd.Flags().String("status", "", "Task status filter")
 	taskListCmd.Flags().String("category", "", "Task category filter")

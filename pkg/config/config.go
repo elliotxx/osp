@@ -29,7 +29,7 @@ func Load(path string) (*Config, error) {
 
 	// Create config directory if it doesn't exist
 	configDir := filepath.Dir(path)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -60,7 +60,7 @@ func (c *Config) Save() error {
 
 	// Create config directory if it doesn't exist
 	configDir = filepath.Dir(path)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -71,7 +71,7 @@ func (c *Config) Save() error {
 	}
 
 	// Write config file
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

@@ -177,7 +177,7 @@ func TestFindPlanningIssue(t *testing.T) {
 
 func TestGeneratePlanningContent(t *testing.T) {
 	// Create a fixed time for testing
-	fixedTime := time.Date(2025, 1, 30, 15, 04, 05, 0, time.UTC)
+	fixedTime := time.Date(2025, 1, 30, 15, 0o4, 0o5, 0, time.UTC)
 	dueDate := time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC)
 
 	// Mock template data

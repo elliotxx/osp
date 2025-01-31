@@ -18,9 +18,9 @@ type Manager struct {
 
 // Stats represents repository statistics
 type Stats struct {
-	Stars      int    `json:"stars"`
-	Forks      int    `json:"forks"`
-	OpenIssues int    `json:"open_issues"`
+	Stars       int    `json:"stars"`
+	Forks       int    `json:"forks"`
+	OpenIssues  int    `json:"open_issues"`
 	LastUpdated string `json:"last_updated"`
 }
 
@@ -62,18 +62,18 @@ func (m *Manager) Get(ctx context.Context, repoName string) (*Stats, error) {
 
 	var repo struct {
 		StargazersCount int       `json:"stargazers_count"`
-		ForksCount     int       `json:"forks_count"`
-		OpenIssues     int       `json:"open_issues_count"`
-		UpdatedAt      time.Time `json:"updated_at"`
+		ForksCount      int       `json:"forks_count"`
+		OpenIssues      int       `json:"open_issues_count"`
+		UpdatedAt       time.Time `json:"updated_at"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&repo); err != nil {
 		return nil, err
 	}
 
 	return &Stats{
-		Stars:      repo.StargazersCount,
-		Forks:      repo.ForksCount,
-		OpenIssues: repo.OpenIssues,
+		Stars:       repo.StargazersCount,
+		Forks:       repo.ForksCount,
+		OpenIssues:  repo.OpenIssues,
 		LastUpdated: repo.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
