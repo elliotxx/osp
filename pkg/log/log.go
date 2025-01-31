@@ -1,8 +1,8 @@
 // Package log provides a simple logging package with support for hierarchical logging and colors.
 //
 // The package supports four built-in log levels with their own prefix symbols and colors:
-//   - Debug:   » (light gray, only shown when verbose mode is enabled)
-//   - Info:    + (blue)
+//   - Debug:   + (light gray, only shown when verbose mode is enabled)
+//   - Info:    » (blue)
 //   - Success: ✓ (green)
 //   - Error:   × (red)
 //
@@ -11,12 +11,14 @@
 //   - L(level) to specify the indentation level (each level adds 2 spaces)
 //   - P(prefix) to specify a custom prefix
 //   - C(color) to specify a custom color
+//   - N() to disable newline at the end of the message
+//   - B() to set the text to bold
 //
 // Basic usage:
 //
 //	// Simple logging with built-in levels (with default colors)
 //	log.Info("Processing item %d", 1)
-//	// Output: + Processing item 1 (in blue)
+//	// Output: » Processing item 1 (in blue)
 //
 //	// Hierarchical logging with custom prefix and colors
 //	log.Info("Found 2 items").
@@ -25,7 +27,7 @@
 //	    L(1).P("→").C(log.ColorCyan).Log("Processing item 2").
 //	    L(1).Error("Failed to process item 2")
 //	// Output:
-//	// + Found 2 items (in blue)
+//	// » Found 2 items (in blue)
 //	//   → Processing item 1 (in cyan)
 //	//   ✓ Item 1 processed (in green)
 //	//   → Processing item 2 (in cyan)
@@ -34,20 +36,42 @@
 //	// Debug logging (only shown when verbose mode is enabled)
 //	log.SetVerbose(true)
 //	log.Debug("Debug message")
-//	// Output: » Debug message (in light gray)
+//	// Output: + Debug message (in light gray)
+//
+//	// Disable newline at the end of the message
+//	log.N().Info("Enter your name: ")
+//	// Output: » Enter your name: (without newline)
+//
+//	// Using bold text
+//	// Method 1: Make entire message bold
+//	log.B().Info("This entire message is bold")
+//	// Output: » This entire message is bold (in bold)
+//
+//	// Method 2: Make part of the message bold
+//	log.Info("Current user: %s", log.Bold("elliotxx"))
+//	// Output: » Current user: elliotxx (with "elliotxx" in bold)
+//
+//	// Method 3: Multiple bold parts
+//	log.Info("Found %s issues, %s are critical", log.Bold("10"), log.Bold("5"))
+//	// Output: » Found 10 issues, 5 are critical (with "10" and "5" in bold)
+//
+//	// Method 4: Combine bold with colors
+//	log.B().C(log.ColorRed).Error("Critical error: %s", log.Bold("permission denied"))
+//	// Output: × Critical error: permission denied (in red, with entire message and "permission denied" in bold)
 //
 // All logging functions return a new Logger pointer, allowing for method chaining:
 //
 //	// L(level) sets the indentation level
 //	// P(prefix) sets a custom prefix
 //	// C(color) sets a custom color
+//	// B() sets the text to bold
 //	// Log() outputs message with current level, prefix and color
-//	log.L(1).P("→").C(log.ColorYellow).Log("Message 1").Log("Message 2")
+//	log.L(1).P("→").C(log.ColorYellow).B().Log("Message 1").Log("Message 2")
 //	// Output:
-//	//   → Message 1 (in yellow)
-//	//   → Message 2 (in yellow)
+//	//   → Message 1 (in yellow and bold)
+//	//   → Message 2 (in yellow and bold)
 //
-// Each method (L, P, C, Log, etc.) returns a new Logger instance with the updated settings,
+// Each method (L, P, C, B, Log, etc.) returns a new Logger instance with the updated settings,
 // making it safe for concurrent use and allowing for flexible logging patterns.
 //
 // Available colors for use with C():
@@ -136,7 +160,7 @@ func (l *Logger) getIndent() string {
 //	//   → Processing item
 func (l *Logger) P(prefix string) *Logger {
 	newLogger := *l
-	newLogger.prefix = prefix + " "
+	newLogger.prefix = prefix
 	return &newLogger
 }
 
@@ -168,6 +192,22 @@ func (l *Logger) C(color string) *Logger {
 	return &newLogger
 }
 
+// B sets the text to bold and returns a new logger.
+//
+// Example:
+//
+//	log.B().Info("This is bold")
+//	// Output: » This is bold (in bold)
+func (l *Logger) B() *Logger {
+	newLogger := *l
+	if newLogger.color == "" {
+		newLogger.color = styleBold
+	} else {
+		newLogger.color = newLogger.color + styleBold
+	}
+	return &newLogger
+}
+
 // N disables the newline at the end of the log message
 func (l *Logger) N() *Logger {
 	newLogger := *l
@@ -184,79 +224,56 @@ func (l *Logger) N() *Logger {
 //	//   → Message 1
 //	//   → Message 2
 func (l *Logger) Log(format string, args ...interface{}) *Logger {
-	// Format message
-	msg := fmt.Sprintf(format, args...)
-
-	// Get base indentation
 	indent := l.getIndent()
+	msg := fmt.Sprintf(format, args...)
+	color := getColor(l.color)
+	reset := getColorReset()
 
-	// Build prefix
-	prefix := l.prefix
-
-	// Split message into lines and process each line
+	// Handle newlines in the message
 	lines := strings.Split(msg, "\n")
 	for i, line := range lines {
-		// Build full message with indentation and prefix
-		fullMsg := indent
-		if i == 0 {
-			// Only add prefix for the first line
-			fullMsg += prefix
-		} else {
-			// For other lines, add spaces to align with the first line
-			fullMsg += strings.Repeat(" ", len(prefix))
+		if line == "" {
+			continue
 		}
-		fullMsg += line
-
-		// Add color if specified
-		if l.color != "" {
-			fullMsg = getColor(l.color) + fullMsg + getColorReset()
+		fmt.Print(indent)
+		fmt.Print(color)
+		if l.prefix != "" {
+			fmt.Printf("%s ", l.prefix)
 		}
-
-		// Print message
-		if i < len(lines)-1 || !l.noNewline {
-			fmt.Println(fullMsg)
-		} else {
-			fmt.Print(fullMsg)
+		fmt.Print(line)
+		fmt.Print(reset)
+		if !l.noNewline || i < len(lines)-1 {
+			fmt.Println()
 		}
 	}
 
-	// Return a new logger with the same settings (except noNewline)
-	newLogger := *l
-	newLogger.noNewline = false
-	return &newLogger
+	return New().L(l.level).P(l.prefix).C(l.color)
 }
 
 // Debug prints debug message if verbose is true and returns a new logger.
-// Debug messages are prefixed with "»" and are only shown when verbose mode is enabled.
+// Debug messages are prefixed with "+" and are only shown when verbose mode is enabled.
 //
 // Example:
 //
 //	log.SetVerbose(true)
-//	log.Debug("Processing data")
-//	// Output: » Processing data
+//	log.Debug("Debug message")
+//	// Output: + Debug message
 func (l *Logger) Debug(format string, args ...interface{}) *Logger {
-	newLogger := *l
-	newLogger.prefix = "» "
-	newLogger.color = colorGray
-	if verbose {
-		fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
+	if !verbose {
+		return l
 	}
-	return &newLogger
+	return l.P("+").C(colorGray).Log(format, args...)
 }
 
 // Info prints info message and returns a new logger.
-// Info messages are prefixed with "+".
+// Info messages are prefixed with "»".
 //
 // Example:
 //
 //	log.Info("Processing %d items", 5)
-//	// Output: + Processing 5 items
+//	// Output: » Processing 5 items
 func (l *Logger) Info(format string, args ...interface{}) *Logger {
-	newLogger := *l
-	newLogger.prefix = "+ "
-	newLogger.color = colorBlue
-	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
-	return &newLogger
+	return l.P("»").C(colorBlue).Log(format, args...)
 }
 
 // Success prints success message and returns a new logger.
@@ -267,11 +284,7 @@ func (l *Logger) Info(format string, args ...interface{}) *Logger {
 //	log.Success("All items processed")
 //	// Output: ✓ All items processed
 func (l *Logger) Success(format string, args ...interface{}) *Logger {
-	newLogger := *l
-	newLogger.prefix = "✓ "
-	newLogger.color = colorGreen
-	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
-	return &newLogger
+	return l.P("✓").C(colorGreen).Log(format, args...)
 }
 
 // Error prints error message and returns a new logger.
@@ -282,11 +295,7 @@ func (l *Logger) Success(format string, args ...interface{}) *Logger {
 //	log.Error("Failed to process item: %v", err)
 //	// Output: × Failed to process item: connection refused
 func (l *Logger) Error(format string, args ...interface{}) *Logger {
-	newLogger := *l
-	newLogger.prefix = "× "
-	newLogger.color = colorRed
-	fmt.Printf(newLogger.getIndent()+getColor(newLogger.color)+newLogger.prefix+format+getColorReset()+"\n", args...)
-	return &newLogger
+	return l.P("×").C(colorRed).Log(format, args...)
 }
 
 // SetVerbose sets the verbose flag.
@@ -324,7 +333,7 @@ func L(level int) *Logger {
 //	// Output:
 //	//   → Child message
 func P(prefix string) *Logger {
-	return &Logger{prefix: prefix + " "}
+	return &Logger{prefix: prefix}
 }
 
 // C sets the color of the logger and returns a new logger.
@@ -337,6 +346,11 @@ func P(prefix string) *Logger {
 //	//   Error message (in red)
 func C(color string) *Logger {
 	return &Logger{color: color}
+}
+
+// B is a convenience function that creates a new logger with bold text.
+func B() *Logger {
+	return New().B()
 }
 
 // N is a convenience function that creates a new logger and disables the newline
@@ -367,6 +381,16 @@ func Success(format string, args ...interface{}) *Logger {
 // Error is a convenience function that creates a new logger and calls Error.
 func Error(format string, args ...interface{}) *Logger {
 	return New().Error(format, args...)
+}
+
+// Bold wraps text in bold style
+//
+// Example:
+//
+//	log.Info("Normal text %s more text", log.Bold("bold text"))
+//	// Output: » Normal text bold text more text (with "bold text" in bold)
+func Bold(text string) string {
+	return styleBold + text + colorReset
 }
 
 // Color constants for use with C() method

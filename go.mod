@@ -4,17 +4,23 @@ go 1.22.5
 
 require (
 	github.com/cli/go-gh/v2 v2.11.2
+	github.com/cli/oauth v1.2.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
+	github.com/zalando/go-keyring v0.2.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/cli/browser v1.3.0 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/henvic/httpretty v0.1.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

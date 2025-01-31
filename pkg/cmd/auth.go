@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/spf13/cobra"
@@ -27,12 +29,8 @@ func newAuthLoginCmd() *cobra.Command {
 		Short: "Login to GitHub",
 		Long:  "Login to GitHub using GitHub CLI's authentication.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := auth.GetToken()
-			if err != nil {
-				return err
-			}
-			log.Success("Successfully logged in with token: %s", token)
-			return nil
+			_, err := auth.Login()
+			return err
 		},
 	}
 }
@@ -43,15 +41,31 @@ func newAuthStatusCmd() *cobra.Command {
 		Short: "Show authentication status",
 		Long:  "Show current GitHub authentication status.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := auth.GetToken()
+			status, err := auth.GetStatus()
 			if err != nil {
 				return err
 			}
-			if token == "" {
-				log.Error("Not logged in")
-				return nil
+
+			// Format token for display
+			tokenDisplay := "none"
+			if status.Token != "" {
+				tokenDisplay = status.Token[:3] + strings.Repeat("*", 37)
 			}
-			log.Success("Logged in with token: %s", token)
+
+			// Format storage type
+			storageType := "file"
+			if status.IsKeyring {
+				storageType = "keyring"
+			}
+
+			// Print status
+			log.B().Log("github.com")
+			log.L(1).Success("Logged in to github.com account %s (%s)\n", log.Bold(status.Username), storageType)
+			log.L(1).Info("Active account: %s", log.Bold("true"))
+			log.L(1).Info("Token: %s", log.Bold(tokenDisplay))
+			if len(status.Scopes) > 0 {
+				log.L(1).Info("Token scopes: '%s'", log.Bold(strings.Join(status.Scopes, "', '")))
+			}
 			return nil
 		},
 	}
