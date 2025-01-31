@@ -168,13 +168,12 @@ func GetStatus() ([]*Status, error) {
 		}
 		log.Debug("Found token in %s, validating...", envName)
 
-		// Get username from API
-		username, err := getUserInfo(token)
-		if err != nil {
+		// Validate token
+		if err := validateToken(token); err != nil {
 			log.Warn("Failed to validate token from %s: %v", envName, err)
 			continue // Skip invalid token
 		}
-		log.Debug("Token validated for user %s", username)
+		log.Debug("Token validated successfully")
 
 		// Get token scopes
 		log.Debug("Getting token scopes...")
@@ -184,6 +183,12 @@ func GetStatus() ([]*Status, error) {
 			scopes = []string{"unknown"}
 		} else {
 			log.Debug("Token scopes: %v", scopes)
+		}
+
+		// Get username (optional, don't fail if this fails)
+		username := "unknown"
+		if u, err := getUserInfo(token); err == nil {
+			username = u
 		}
 
 		statuses = append(statuses, &Status{
@@ -207,25 +212,33 @@ func GetStatus() ([]*Status, error) {
 		token, err := keyring.Get(serviceName, username)
 		if err == nil {
 			log.Debug("Successfully retrieved token from keyring")
-			// Get token scopes
-			log.Debug("Getting token scopes...")
-			scopes, err := getTokenScopes(token)
-			if err != nil {
-				log.Warn("Failed to get token scopes: %v", err)
-				scopes = []string{"unknown"}
-			} else {
-				log.Debug("Token scopes: %v", scopes)
-			}
 
-			statuses = append(statuses, &Status{
-				Username:     username,
-				Token:        token,
-				TokenDisplay: token[:3] + strings.Repeat("*", 37),
-				StorageType:  "keyring",
-				IsKeyring:    true,
-				Scopes:       scopes,
-				Active:       len(statuses) == 0, // Active only if no env token
-			})
+			// Validate token
+			if err := validateToken(token); err != nil {
+				log.Warn("Failed to validate token from keyring: %v", err)
+			} else {
+				log.Debug("Token validated successfully")
+
+				// Get token scopes
+				log.Debug("Getting token scopes...")
+				scopes, err := getTokenScopes(token)
+				if err != nil {
+					log.Warn("Failed to get token scopes: %v", err)
+					scopes = []string{"unknown"}
+				} else {
+					log.Debug("Token scopes: %v", scopes)
+				}
+
+				statuses = append(statuses, &Status{
+					Username:     username,
+					Token:        token,
+					TokenDisplay: token[:3] + strings.Repeat("*", 37),
+					StorageType:  "keyring",
+					IsKeyring:    true,
+					Scopes:       scopes,
+					Active:       len(statuses) == 0, // Active only if no env token
+				})
+			}
 		} else {
 			log.Debug("Failed to get token from keyring: %v", err)
 			// Try config file
@@ -245,25 +258,32 @@ func GetStatus() ([]*Status, error) {
 			token := strings.TrimSpace(string(data))
 			log.Debug("Successfully read token from file")
 
-			// Get token scopes
-			log.Debug("Getting token scopes...")
-			scopes, err := getTokenScopes(token)
-			if err != nil {
-				log.Debug("Failed to get token scopes: %v", err)
-				scopes = []string{"unknown"}
+			// Validate token
+			if err := validateToken(token); err != nil {
+				log.Warn("Failed to validate token from file: %v", err)
 			} else {
-				log.Debug("Token scopes: %v", scopes)
-			}
+				log.Debug("Token validated successfully")
 
-			statuses = append(statuses, &Status{
-				Username:     username,
-				Token:        token,
-				TokenDisplay: token[:3] + strings.Repeat("*", 37),
-				StorageType:  "config file",
-				IsKeyring:    false,
-				Scopes:       scopes,
-				Active:       len(statuses) == 0, // Active only if no env token
-			})
+				// Get token scopes
+				log.Debug("Getting token scopes...")
+				scopes, err := getTokenScopes(token)
+				if err != nil {
+					log.Debug("Failed to get token scopes: %v", err)
+					scopes = []string{"unknown"}
+				} else {
+					log.Debug("Token scopes: %v", scopes)
+				}
+
+				statuses = append(statuses, &Status{
+					Username:     username,
+					Token:        token,
+					TokenDisplay: token[:3] + strings.Repeat("*", 37),
+					StorageType:  "config",
+					IsKeyring:    false,
+					Scopes:       scopes,
+					Active:       len(statuses) == 0, // Active only if no env token
+				})
+			}
 		}
 	} else {
 		log.Debug("No stored username found: %v", err)
@@ -282,6 +302,31 @@ type Status struct {
 	IsKeyring    bool
 	Scopes       []string
 	Active       bool
+}
+
+// validateToken validates the token using the rate_limit API
+// This is a minimal permission API that should work for any valid token
+func validateToken(token string) error {
+	req, err := http.NewRequest(http.MethodGet, githubAPI+"/rate_limit", nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("GitHub API error: %s", string(body))
+	}
+
+	return nil
 }
 
 // getUserInfo gets the GitHub user information using the token
