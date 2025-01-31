@@ -203,7 +203,7 @@ func (l *Logger) B() *Logger {
 	if newLogger.color == "" {
 		newLogger.color = styleBold
 	} else {
-		newLogger.color = newLogger.color + styleBold
+		newLogger.color += styleBold
 	}
 	return &newLogger
 }

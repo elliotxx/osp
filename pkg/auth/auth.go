@@ -7,11 +7,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"os/exec"
 
 	"github.com/cli/oauth/device"
 	"github.com/elliotxx/osp/pkg/log"
@@ -142,12 +141,12 @@ func GetToken() (string, error) {
 
 // GetStatus returns the current authentication status
 func GetStatus() ([]*Status, error) {
-	var statuses []*Status
+	statuses := make([]*Status, 0, 2)
 
 	// Check environment variables first
 	envTokens := map[string]string{
 		"GITHUB_TOKEN": os.Getenv("GITHUB_TOKEN"),
-		"GH_TOKEN":    os.Getenv("GH_TOKEN"),
+		"GH_TOKEN":     os.Getenv("GH_TOKEN"),
 	}
 
 	for envName, token := range envTokens {
@@ -247,7 +246,7 @@ type Status struct {
 
 // getUserInfo gets the GitHub user information using the token
 func getUserInfo(token string) (string, error) {
-	req, err := http.NewRequest("GET", githubAPI+"/user", nil)
+	req, err := http.NewRequest(http.MethodGet, githubAPI+"/user", nil)
 	if err != nil {
 		return "", err
 	}
@@ -286,7 +285,7 @@ func getUserInfo(token string) (string, error) {
 
 // getTokenScopes gets the scopes of the token
 func getTokenScopes(token string) ([]string, error) {
-	req, err := http.NewRequest("GET", githubAPI+"/user", nil)
+	req, err := http.NewRequest(http.MethodGet, githubAPI+"/user", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -326,13 +325,13 @@ func storeToken(username, token string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(configDir, 0700); err != nil {
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	// 2. Store username
 	usernameFile := filepath.Join(configDir, "username")
-	if err := os.WriteFile(usernameFile, []byte(username), 0600); err != nil {
+	if err := os.WriteFile(usernameFile, []byte(username), 0o600); err != nil {
 		return fmt.Errorf("failed to store username: %w", err)
 	}
 
@@ -344,7 +343,7 @@ func storeToken(username, token string) error {
 
 	// 4. If keyring is not available, store token in config file
 	tokenFile := filepath.Join(configDir, "token")
-	return os.WriteFile(tokenFile, []byte(token), 0600)
+	return os.WriteFile(tokenFile, []byte(token), 0o600)
 }
 
 // getStoredUsername gets the username from the config file
