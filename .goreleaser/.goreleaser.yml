@@ -33,7 +33,7 @@ builds:
     main: .
     binary: osp
 archives:
-  - id: release
+  - id: osp
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     builds:
       - osp
@@ -202,6 +202,6 @@ brews:
     test: |
       system "#{bin}/osp --version"
 
-    # Specify for which build to create a brew formula.
+    # Specify which builds to create formulas for
     ids:
-    - osp
+      - osp
