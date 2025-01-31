@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -75,18 +76,20 @@ func newAuthStatusCmd() *cobra.Command {
 			log.SetNoColor(true)
 			defer log.SetNoColor(false)
 
-			status, err := auth.GetStatus()
+			statuses, err := auth.GetStatus()
 			if err != nil {
 				return err
 			}
 
 			// Print status
 			log.B().Log("github.com")
-			log.L(1).Success("Logged in to github.com account %s (%s)", log.Bold(status.Username), status.StorageType)
-			log.L(1).Info("Active account: %s", log.Bold("true"))
-			log.L(1).Info("Token: %s", log.Bold(status.TokenDisplay))
-			if len(status.Scopes) > 0 {
-				log.L(1).Info("Token scopes: '%s'", log.Bold(strings.Join(status.Scopes, "', '")))
+			for _, status := range statuses {
+				log.L(1).Success("Logged in to github.com account %s (%s)", log.Bold(status.Username), status.StorageType)
+				log.L(2).Info("Active account: %s", log.Bold(fmt.Sprintf("%v", status.Active)))
+				log.L(2).Info("Token: %s", log.Bold(status.TokenDisplay))
+				if len(status.Scopes) > 0 {
+					log.L(2).Info("Token scopes: '%s'", log.Bold(strings.Join(status.Scopes, "', '")))
+				}
 			}
 			return nil
 		},

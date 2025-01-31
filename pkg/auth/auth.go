@@ -106,18 +106,26 @@ func Logout() error {
 
 // GetToken returns the stored GitHub token
 func GetToken() (string, error) {
+	// Try to get token from environment variables first
+	if token := os.Getenv("GH_TOKEN"); token != "" {
+		return token, nil
+	}
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		return token, nil
+	}
+
 	username, err := getStoredUsername()
 	if err != nil {
 		return "", fmt.Errorf("failed to get stored username: %w", err)
 	}
 
-	// 1. Try to get token from keyring
+	// Try to get token from keyring
 	token, err := keyring.Get(serviceName, username)
 	if err == nil {
 		return token, nil
 	}
 
-	// 2. If keyring is not available, try config file
+	// If keyring is not available, try config file
 	configDir, err := getConfigDir()
 	if err != nil {
 		return "", err
@@ -132,69 +140,109 @@ func GetToken() (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-// HasToken checks if a token is stored
-func HasToken() bool {
-	_, err := GetToken()
-	return err == nil
-}
-
 // GetStatus returns the current authentication status
-func GetStatus() (*Status, error) {
-	// Get token
-	token, err := GetToken()
-	if err != nil {
-		return nil, err
+func GetStatus() ([]*Status, error) {
+	var statuses []*Status
+
+	// Check environment variables first
+	envTokens := map[string]string{
+		"GITHUB_TOKEN": os.Getenv("GITHUB_TOKEN"),
+		"GH_TOKEN":    os.Getenv("GH_TOKEN"),
 	}
 
-	// Get username
+	for envName, token := range envTokens {
+		if token == "" {
+			continue
+		}
+
+		// Get username from API
+		username, err := getUserInfo(token)
+		if err != nil {
+			continue // Skip invalid token
+		}
+
+		// Get token scopes
+		scopes, err := getTokenScopes(token)
+		if err != nil {
+			scopes = []string{"unknown"}
+		}
+
+		statuses = append(statuses, &Status{
+			Username:     username,
+			Token:        token,
+			TokenDisplay: token[:3] + strings.Repeat("*", 37),
+			StorageType:  envName,
+			IsKeyring:    false,
+			Scopes:       scopes,
+			Active:       true,
+		})
+	}
+
+	// Then check stored token
 	username, err := getStoredUsername()
-	if err != nil {
-		return nil, err
+	if err == nil {
+		// Try keyring first
+		token, err := keyring.Get(serviceName, username)
+		if err == nil {
+			// Get token scopes
+			scopes, err := getTokenScopes(token)
+			if err != nil {
+				scopes = []string{"unknown"}
+			}
+
+			statuses = append(statuses, &Status{
+				Username:     username,
+				Token:        token,
+				TokenDisplay: token[:3] + strings.Repeat("*", 37),
+				StorageType:  "keyring",
+				IsKeyring:    true,
+				Scopes:       scopes,
+				Active:       len(statuses) == 0, // Active only if no env token
+			})
+		} else {
+			// Try config file
+			configDir, err := getConfigDir()
+			if err == nil {
+				tokenFile := filepath.Join(configDir, "token")
+				data, err := os.ReadFile(tokenFile)
+				if err == nil {
+					token := strings.TrimSpace(string(data))
+					// Get token scopes
+					scopes, err := getTokenScopes(token)
+					if err != nil {
+						scopes = []string{"unknown"}
+					}
+
+					statuses = append(statuses, &Status{
+						Username:     username,
+						Token:        token,
+						TokenDisplay: token[:3] + strings.Repeat("*", 37),
+						StorageType:  "file",
+						IsKeyring:    false,
+						Scopes:       scopes,
+						Active:       len(statuses) == 0, // Active only if no env token
+					})
+				}
+			}
+		}
 	}
 
-	// Get token scopes
-	scopes, err := getTokenScopes(token)
-	if err != nil {
-		return nil, err
+	if len(statuses) == 0 {
+		return nil, fmt.Errorf("no authentication token found, please run 'osp auth login' first")
 	}
 
-	// Check if using keyring
-	isKeyring := true
-	_, err = keyring.Get(serviceName, username)
-	if err != nil {
-		isKeyring = false
-	}
-
-	// Format token display
-	tokenDisplay := "none"
-	if token != "" {
-		tokenDisplay = token[:3] + strings.Repeat("*", 37)
-	}
-
-	// Format storage type
-	storageType := "file"
-	if isKeyring {
-		storageType = "keyring"
-	}
-
-	return &Status{
-		Username:     username,
-		Token:        token,
-		TokenDisplay: tokenDisplay,
-		StorageType:  storageType,
-		IsKeyring:    isKeyring,
-		Scopes:       scopes,
-	}, nil
+	return statuses, nil
 }
 
 // Status represents the current authentication status
 type Status struct {
 	Username     string
 	Token        string
-	TokenDisplay string // Token with most characters masked
-	StorageType  string // "keyring" or "file"
+	TokenDisplay string
+	StorageType  string
 	IsKeyring    bool
 	Scopes       []string
+	Active       bool
 }
 
 // getUserInfo gets the GitHub user information using the token
@@ -243,7 +291,7 @@ func getTokenScopes(token string) ([]string, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "token "+token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -253,6 +301,9 @@ func getTokenScopes(token string) ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return []string{"unknown"}, nil
+		}
 		return nil, fmt.Errorf("failed to get token scopes")
 	}
 
@@ -340,4 +391,10 @@ func openBrowser(url string) error {
 		err = fmt.Errorf("unsupported platform")
 	}
 	return err
+}
+
+// HasToken checks if a token is stored
+func HasToken() bool {
+	_, err := GetToken()
+	return err == nil
 }
