@@ -48,7 +48,7 @@ func (m *Manager) Add(ctx context.Context, repoName string) error {
 
 	// Add to config
 	m.cfg.Repositories = append(m.cfg.Repositories, repo.FullName)
-	
+
 	// Automatically select the newly added repository
 	m.cfg.Current = repo.FullName
 
