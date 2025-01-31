@@ -1,8 +1,9 @@
 // Package log provides a simple logging package with support for hierarchical logging and colors.
 //
-// The package supports four built-in log levels with their own prefix symbols and colors:
+// The package supports five built-in log levels with their own prefix symbols and colors:
 //   - Debug:   + (light gray, only shown when verbose mode is enabled)
 //   - Info:    » (blue)
+//   - Warn:    ! (yellow)
 //   - Success: ✓ (green)
 //   - Error:   × (red)
 //
@@ -276,6 +277,17 @@ func (l *Logger) Info(format string, args ...interface{}) *Logger {
 	return l.P("»").C(colorBlue).Log(format, args...)
 }
 
+// Warn prints warning message and returns a new logger.
+// Warning messages are prefixed with "!".
+//
+// Example:
+//
+//	log.Warn("Low disk space: %d%%", 10)
+//	// Output: ! Low disk space: 10%
+func (l *Logger) Warn(format string, args ...interface{}) *Logger {
+	return l.P("!").C(colorYellow).Log(format, args...)
+}
+
 // Success prints success message and returns a new logger.
 // Success messages are prefixed with "✓".
 //
@@ -371,6 +383,11 @@ func Debug(format string, args ...interface{}) *Logger {
 // Info is a convenience function that creates a new logger and calls Info.
 func Info(format string, args ...interface{}) *Logger {
 	return New().Info(format, args...)
+}
+
+// Warn is a convenience function that creates a new logger and calls Warn.
+func Warn(format string, args ...interface{}) *Logger {
+	return New().Warn(format, args...)
 }
 
 // Success is a convenience function that creates a new logger and calls Success.

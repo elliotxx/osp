@@ -222,7 +222,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 				return nil
 			}
 		} else {
-			log.C(log.ColorYellow).P("!").Log("Auto-confirm is enabled, skipping confirmation")
+			log.Warn("Auto-confirm is enabled, skipping confirmation")
 		}
 
 		// Create or update the planning issue
@@ -270,7 +270,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 				L(1).P("→").Log("Planning issue URL: %s", issueURL)
 		}
 	} else {
-		log.C(log.ColorYellow).P("!").Log("Dry-run mode, skipping update")
+		log.Warn("Dry-run mode, skipping update")
 	}
 
 	return nil

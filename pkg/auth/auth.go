@@ -48,8 +48,8 @@ func Login() (string, error) {
 	fmt.Scanln() // Wait for Enter
 
 	if err := openBrowser(code.VerificationURI); err != nil {
-		log.Error("Failed to open browser: %v\n", err)
-		log.Info("Please visit %s to authenticate\n", log.Bold(code.VerificationURI))
+		log.Error("Failed to open browser: %v", err)
+		log.Info("Please visit %s to authenticate", log.Bold(code.VerificationURI))
 	}
 
 	// 3. Wait for user to complete authentication
@@ -119,7 +119,6 @@ func GetToken() (string, error) {
 	log.Debug("No token found in environment variables, checking stored credentials...")
 	username, err := getStoredUsername()
 	if err != nil {
-		log.Debug("Failed to get stored username: %v", err)
 		return "", fmt.Errorf("failed to get stored username: %w", err)
 	}
 
@@ -136,7 +135,6 @@ func GetToken() (string, error) {
 	log.Debug("Keyring not available, trying config file...")
 	configDir, err := getConfigDir()
 	if err != nil {
-		log.Debug("Failed to get config directory: %v", err)
 		return "", err
 	}
 
@@ -144,7 +142,6 @@ func GetToken() (string, error) {
 	log.Debug("Attempting to read token from file: %s", tokenFile)
 	data, err := os.ReadFile(tokenFile)
 	if err != nil {
-		log.Debug("Failed to read token file: %v", err)
 		return "", fmt.Errorf("no authentication token found, please run 'osp auth login' first")
 	}
 
@@ -174,7 +171,7 @@ func GetStatus() ([]*Status, error) {
 		// Get username from API
 		username, err := getUserInfo(token)
 		if err != nil {
-			log.Debug("Failed to validate token from %s: %v", envName, err)
+			log.Warn("Failed to validate token from %s: %v", envName, err)
 			continue // Skip invalid token
 		}
 		log.Debug("Token validated for user %s", username)
@@ -183,7 +180,7 @@ func GetStatus() ([]*Status, error) {
 		log.Debug("Getting token scopes...")
 		scopes, err := getTokenScopes(token)
 		if err != nil {
-			log.Debug("Failed to get token scopes: %v", err)
+			log.Warn("Failed to get token scopes: %v", err)
 			scopes = []string{"unknown"}
 		} else {
 			log.Debug("Token scopes: %v", scopes)
@@ -214,7 +211,7 @@ func GetStatus() ([]*Status, error) {
 			log.Debug("Getting token scopes...")
 			scopes, err := getTokenScopes(token)
 			if err != nil {
-				log.Debug("Failed to get token scopes: %v", err)
+				log.Warn("Failed to get token scopes: %v", err)
 				scopes = []string{"unknown"}
 			} else {
 				log.Debug("Token scopes: %v", scopes)
