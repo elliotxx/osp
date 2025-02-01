@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/elliotxx/osp/pkg/config"
@@ -38,10 +39,12 @@ type Options struct {
 	Categories       []string `json:"categories"`
 }
 
-var (
-	// defaultHelpLabels is the default help labels
-	defaultHelpLabels = []string{"good first issue", "help wanted"}
-)
+// Stats represents statistics about the issues
+type Stats struct {
+	TotalIssues      int `json:"total_issues"`
+	CompletedIssues  int `json:"completed_issues"`
+	InProgressIssues int `json:"in_progress_issues"`
+}
 
 // TemplateData represents the data passed to the template
 type TemplateData struct {
@@ -49,6 +52,8 @@ type TemplateData struct {
 	IssuesByCategory map[string]map[string][]OnboardIssue `json:"issues_by_category"`
 	DifficultyLabels []string                             `json:"difficulty_labels"`
 	Categories       []string                             `json:"categories"`
+	Stats            Stats                                `json:"stats"`
+	HelpLabels       []string                             `json:"help_labels"`
 }
 
 // NewManager creates a new onboard manager
@@ -198,7 +203,16 @@ func (m *Manager) SearchOnboardIssues(_ context.Context, repoName string, opts O
 func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts Options) (string, error) {
 	// Load template
 	log.Debug("Loading template...")
-	tmpl, err := template.ParseFS(templatesFS, "templates/*.gotmpl")
+	tmpl := template.New("onboard.gotmpl").Funcs(template.FuncMap{
+		"now": func() string {
+			return time.Now().UTC().Format("January 2, 2006 15:04 MST")
+		},
+		"urlEncode": func(s string) string {
+			return strings.ReplaceAll(s, " ", "%20")
+		},
+	})
+
+	tmpl, err := tmpl.ParseFS(templatesFS, "templates/*.gotmpl")
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -239,6 +253,20 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 	// Create a buffer to store the output
 	var buf strings.Builder
 
+	// Calculate statistics
+	stats := Stats{
+		TotalIssues:      len(uniqueIssues),
+		CompletedIssues:  0,
+		InProgressIssues: 0,
+	}
+	for _, issue := range uniqueIssues {
+		if issue.Status == "closed" {
+			stats.CompletedIssues++
+		} else if issue.Assignee != "" {
+			stats.InProgressIssues++
+		}
+	}
+
 	// Execute template
 	log.Debug("Executing template...")
 	err = tmpl.ExecuteTemplate(&buf, "onboard.gotmpl", TemplateData{
@@ -246,6 +274,8 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		IssuesByCategory: issuesByDiffCategory,
 		DifficultyLabels: opts.DifficultyLabels,
 		Categories:       opts.Categories,
+		Stats:            stats,
+		HelpLabels:       opts.HelpLabels,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
