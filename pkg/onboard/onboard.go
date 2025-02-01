@@ -245,6 +245,11 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 	for difficulty := range issuesByDiffCategory {
 		for category := range issuesByDiffCategory[difficulty] {
 			sort.Slice(issuesByDiffCategory[difficulty][category], func(i, j int) bool {
+				// First sort by status (open before closed)
+				if issuesByDiffCategory[difficulty][category][i].Status != issuesByDiffCategory[difficulty][category][j].Status {
+					return issuesByDiffCategory[difficulty][category][i].Status == "open"
+				}
+				// Then sort by number
 				return issuesByDiffCategory[difficulty][category][i].Number < issuesByDiffCategory[difficulty][category][j].Number
 			})
 		}
