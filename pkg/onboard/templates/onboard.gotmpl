@@ -18,9 +18,9 @@ Thanks to all our contributors who have completed onboarding issues! Your contri
 > The following onboarding issues are organized first by difficulty level (from easy to hard), and then by category within each difficulty level.
 
 {{ range $difficulty := .DifficultyLabels }}{{ if $difficulty }}{{ if $categoryMap := index $.IssuesByCategory $difficulty }}
-### {{ $difficulty }}{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
+### Difficulty: {{ $difficulty }}{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
 {{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
-#### {{ $category }} ({{ len $issues }})
+#### Category: {{ $category }} ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
 #### Unclassified ({{ len $issues }})
@@ -28,7 +28,7 @@ Thanks to all our contributors who have completed onboarding issues! Your contri
 {{ end }}{{ end }}{{ end }}{{ end }}{{ if $categoryMap := index $.IssuesByCategory "" }}
 ### Unspecified difficulty{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
 {{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
-#### {{ $category }} ({{ len $issues }})
+#### Category: {{ $category }} ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
 #### Unclassified ({{ len $issues }})
