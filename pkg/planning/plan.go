@@ -154,10 +154,10 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 		if err != nil {
 			return fmt.Errorf("failed to get issues: %w", err)
 		}
-		
+
 		allIssues = append(allIssues, issues...)
 		log.Debug("Got %d issues from page %d", len(issues), page)
-		
+
 		// If we got less than per_page items, we've reached the end
 		if len(issues) < 100 {
 			break
