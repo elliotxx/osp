@@ -417,25 +417,22 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options) err
 	log.Debug("Found %d existing issues with onboarding label", len(existingIssues))
 
 	// Find the onboarding issue with the smallest number
-	onboardingTitle := opts.TargetTitle
 	var onboardingIssue *struct {
 		Title  string `json:"title"`
 		Number int    `json:"number"`
 	}
-	minIssueNumber := -1
-
-	for _, issue := range existingIssues {
-		if issue.Title == onboardingTitle {
-			if onboardingIssue == nil || issue.Number < minIssueNumber {
-				onboardingIssue = &issue
-				minIssueNumber = issue.Number
-				log.Debug("Found onboarding issue #%d with title '%s'", issue.Number, issue.Title)
+	if len(existingIssues) > 0 {
+		onboardingIssue = &existingIssues[0]
+		for i := 1; i < len(existingIssues); i++ {
+			if existingIssues[i].Number < onboardingIssue.Number {
+				onboardingIssue = &existingIssues[i]
 			}
 		}
+		log.Debug("Found onboarding issue #%d", onboardingIssue.Number)
 	}
 
 	if len(existingIssues) > 1 {
-		log.Warn("Found multiple onboarding issues, will update issue #%d", minIssueNumber)
+		log.Warn("Found multiple onboarding issues, will update issue #%d", onboardingIssue.Number)
 	}
 
 	// Show preview
@@ -472,7 +469,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options) err
 		if onboardingIssue == nil {
 			// Create new issue
 			body := map[string]interface{}{
-				"title":  onboardingTitle,
+				"title":  opts.TargetTitle,
 				"body":   content,
 				"labels": []string{opts.TargetLabel},
 			}
@@ -495,7 +492,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options) err
 		} else {
 			// Update existing issue
 			body := map[string]interface{}{
-				"title": onboardingTitle,
+				"title": opts.TargetTitle,
 				"body":  content,
 			}
 			bodyBytes, err := json.Marshal(body)
