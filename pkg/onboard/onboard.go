@@ -1,10 +1,14 @@
 package onboard
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"text/template"
@@ -20,7 +24,8 @@ var templatesFS embed.FS
 
 // Manager handles onboarding issue management
 type Manager struct {
-	cfg *config.Config
+	cfg    *config.Config
+	client *api.RESTClient
 }
 
 // OnboardIssue represents an issue suitable for new contributors
@@ -37,6 +42,22 @@ type Options struct {
 	HelpLabels       []string `json:"help_labels"`
 	DifficultyLabels []string `json:"difficulty_labels"`
 	Categories       []string `json:"categories"`
+}
+
+// OnboardOptions represents options for updating onboarding issues
+type OnboardOptions struct {
+	OnboardingLabel string // Label used to identify onboarding issues
+	DryRun          bool   // If true, only show preview without making changes
+	AutoConfirm     bool   // If true, skip confirmation prompt
+}
+
+// DefaultOnboardOptions returns default onboarding options
+func DefaultOnboardOptions() OnboardOptions {
+	return OnboardOptions{
+		OnboardingLabel: "onboarding",
+		DryRun:          false,
+		AutoConfirm:     false,
+	}
 }
 
 // Stats represents statistics about the issues
@@ -59,8 +80,11 @@ type TemplateData struct {
 }
 
 // NewManager creates a new onboard manager
-func NewManager(cfg *config.Config) *Manager {
-	return &Manager{cfg: cfg}
+func NewManager(cfg *config.Config, client *api.RESTClient) *Manager {
+	return &Manager{
+		cfg:    cfg,
+		client: client,
+	}
 }
 
 // SearchOnboardIssues generates onboarding issues for new contributors
@@ -69,12 +93,6 @@ func (m *Manager) SearchOnboardIssues(_ context.Context, repoName string, opts O
 	parts := strings.Split(repoName, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid repository name format, should be owner/repo")
-	}
-
-	// Create GitHub client
-	client, err := api.DefaultRESTClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 	}
 
 	// Query issues with help wanted labels
@@ -130,7 +148,7 @@ func (m *Manager) SearchOnboardIssues(_ context.Context, repoName string, opts O
 			} `json:"items"`
 		}
 
-		err = client.Get(fmt.Sprintf("search/issues?q=%s&page=%d&per_page=100", url.QueryEscape(query), page), &response)
+		err := m.client.Get(fmt.Sprintf("search/issues?q=%s&page=%d&per_page=100", url.QueryEscape(query), page), &response)
 		if err != nil {
 			return nil, fmt.Errorf("failed to search issues: %w", err)
 		}
@@ -334,4 +352,158 @@ func generateProgressBar(completed, total int) string {
 	empty := strings.Repeat("░", width-filledWidth)
 
 	return filled + empty + fmt.Sprintf(" %.1f%%", percentage*100)
+}
+
+// askForConfirmation asks the user for confirmation
+func askForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("%s [y/n]: ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Error("Error reading input: %v", err)
+			return false
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
+}
+
+// Update updates or creates an onboarding issue
+func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onboardOpts OnboardOptions) error {
+	log.Debug("Updating onboarding issue in %s", repoName)
+
+	// Generate onboarding content
+	issues, err := m.SearchOnboardIssues(ctx, repoName, opts)
+	if err != nil {
+		return fmt.Errorf("failed to search onboarding issues: %w", err)
+	}
+
+	content, err := m.GenerateContent(issues, repoName, opts)
+	if err != nil {
+		return fmt.Errorf("failed to generate onboarding content: %w", err)
+	}
+	log.Debug("Generated onboarding content with %d bytes", len(content))
+
+	// Find existing onboarding issues
+	path := fmt.Sprintf("repos/%s/issues?labels=%s&state=all", repoName, onboardOpts.OnboardingLabel)
+	var existingIssues []struct {
+		Title  string `json:"title"`
+		Number int    `json:"number"`
+	}
+	err = m.client.Get(path, &existingIssues)
+	if err != nil {
+		return fmt.Errorf("failed to get existing onboarding issues: %w", err)
+	}
+	log.Debug("Found %d existing issues with onboarding label", len(existingIssues))
+
+	// Find the onboarding issue with the smallest number
+	onboardingTitle := "Onboarding: Getting Started with Contributing"
+	var onboardingIssue *struct {
+		Title  string `json:"title"`
+		Number int    `json:"number"`
+	}
+	minIssueNumber := -1
+
+	for _, issue := range existingIssues {
+		if issue.Title == onboardingTitle {
+			if onboardingIssue == nil || issue.Number < minIssueNumber {
+				onboardingIssue = &issue
+				minIssueNumber = issue.Number
+				log.Debug("Found onboarding issue #%d with title '%s'", issue.Number, issue.Title)
+			}
+		}
+	}
+
+	if len(existingIssues) > 1 {
+		log.Warn("Found multiple onboarding issues, will update issue #%d", minIssueNumber)
+	}
+
+	// Show preview
+	if onboardingIssue == nil {
+		log.Info("Creating new onboarding issue")
+	} else {
+		log.Info("Updating existing onboarding issue #%d", onboardingIssue.Number)
+	}
+
+	// Preview the content
+	log.C(log.ColorBlue).P("↓").Log("Preview of the onboarding content:")
+	log.C(log.ColorCyan).Log("%s", content)
+
+	if !onboardOpts.DryRun {
+		// Ask for confirmation if auto-confirm is not enabled
+		if !onboardOpts.AutoConfirm {
+			// Show update target
+			if onboardingIssue == nil {
+				log.Info("Will create a new onboarding issue with the above content")
+			} else {
+				issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repoName, onboardingIssue.Number)
+				log.Info("Will update existing onboarding issue (%s) with the above content", issueURL)
+			}
+
+			if !askForConfirmation("Do you want to proceed with the update?") {
+				log.Info("Update cancelled")
+				return nil
+			}
+		} else {
+			log.Warn("Auto-confirm is enabled, skipping confirmation")
+		}
+
+		// Create or update the onboarding issue
+		if onboardingIssue == nil {
+			// Create new issue
+			body := map[string]interface{}{
+				"title":  onboardingTitle,
+				"body":   content,
+				"labels": []string{onboardOpts.OnboardingLabel},
+			}
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return fmt.Errorf("failed to marshal request body: %w", err)
+			}
+
+			path := fmt.Sprintf("repos/%s/issues", repoName)
+			var response struct {
+				Number int `json:"number"`
+			}
+			err = m.client.Post(path, bytes.NewReader(bodyBytes), &response)
+			if err != nil {
+				return fmt.Errorf("failed to create onboarding issue: %w", err)
+			}
+			issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repoName, response.Number)
+			log.Success("Successfully created onboarding issue").
+				L(1).P("→").Log("Onboarding issue URL: %s", issueURL)
+		} else {
+			// Update existing issue
+			body := map[string]interface{}{
+				"title": onboardingTitle,
+				"body":  content,
+			}
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return fmt.Errorf("failed to marshal request body: %w", err)
+			}
+
+			path := fmt.Sprintf("repos/%s/issues/%d", repoName, onboardingIssue.Number)
+			err = m.client.Patch(path, bytes.NewReader(bodyBytes), nil)
+			if err != nil {
+				return fmt.Errorf("failed to update onboarding issue: %w", err)
+			}
+			issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", repoName, onboardingIssue.Number)
+			log.Success("Successfully updated onboarding issue #%d", onboardingIssue.Number).
+				L(1).P("→").Log("Onboarding issue URL: %s", issueURL)
+		}
+	} else {
+		log.Warn("Dry-run mode, skipping update")
+	}
+
+	return nil
 }

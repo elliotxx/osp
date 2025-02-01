@@ -89,7 +89,7 @@ func TestGenerateContent(t *testing.T) {
 			Token: "test-token",
 		},
 	}
-	m := NewManager(cfg)
+	m := NewManager(cfg, nil)
 
 	// Generate content
 	content, err := m.GenerateContent(issues, "elliotxx/osp", opts)

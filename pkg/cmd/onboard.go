@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/onboard"
@@ -53,9 +54,27 @@ For example: -c "Category1,Category2,Category3"`,
 		if err != nil {
 			return err
 		}
+		dryRun, err := cmd.Flags().GetBool("dry-run")
+		if err != nil {
+			return err
+		}
+		autoConfirm, err := cmd.Flags().GetBool("yes")
+		if err != nil {
+			return err
+		}
+		onboardingLabel, err := cmd.Flags().GetString("onboarding-label")
+		if err != nil {
+			return err
+		}
 		log.Debug("Help labels: [%s]", strings.Join(helpLabels, ", "))
 		log.Debug("Difficulty labels: [%s]", strings.Join(difficultyLabels, ", "))
 		log.Debug("Categories: [%s]", strings.Join(categories, ", "))
+
+		// Create GitHub client
+		client, err := api.DefaultRESTClient()
+		if err != nil {
+			return fmt.Errorf("failed to create GitHub client: %w", err)
+		}
 
 		// Create options
 		opts := onboard.Options{
@@ -63,24 +82,20 @@ For example: -c "Category1,Category2,Category3"`,
 			DifficultyLabels: difficultyLabels,
 			Categories:       categories,
 		}
-
-		onboardManager := onboard.NewManager(cfg)
-		log.Debug("Searching for issues suitable for new contributors...")
-		issues, err := onboardManager.SearchOnboardIssues(cmd.Context(), repoName, opts)
-		if err != nil {
-			return fmt.Errorf("failed to generate onboarding issues: %w", err)
-		}
-		log.Debug("Found %d issues", len(issues))
-
-		// Generate content
-		log.Debug("Generating onboarding content...")
-		content, err := onboardManager.GenerateContent(issues, repoName, opts)
-		if err != nil {
-			return fmt.Errorf("failed to generate onboarding content: %w", err)
+		onboardOpts := onboard.OnboardOptions{
+			OnboardingLabel: onboardingLabel,
+			DryRun:          dryRun,
+			AutoConfirm:     autoConfirm,
 		}
 
-		// Print content
-		fmt.Println(content)
+		// Create onboard manager
+		onboardManager := onboard.NewManager(cfg, client)
+
+		// Update onboarding issue
+		err = onboardManager.Update(cmd.Context(), repoName, opts, onboardOpts)
+		if err != nil {
+			return fmt.Errorf("failed to update onboarding issue: %w", err)
+		}
 
 		return nil
 	},
@@ -93,4 +108,7 @@ func init() {
 	onboardCmd.Flags().StringSliceP("help-labels", "l", []string{"good first issue", "help wanted"}, "Help labels")
 	onboardCmd.Flags().StringSliceP("difficulty-labels", "d", []string{"good first issue", "help wanted"}, "Difficulty labels, from easy to hard")
 	onboardCmd.Flags().StringSliceP("categories", "c", []string{"bug", "documentation", "enhancement"}, "Categories to group issues by")
+	onboardCmd.Flags().BoolP("dry-run", "n", false, "Only show what would be done without making changes")
+	onboardCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompt")
+	onboardCmd.Flags().String("onboarding-label", "onboarding", "Label used to identify onboarding issues")
 }
