@@ -1,21 +1,39 @@
 ## osp onboard
 
-Generate community onboarding issues
+Manage onboarding content for community contributors
 
 ### Synopsis
 
-Generate community onboarding issues based on issue labels.
-This command will generate a list of issues suitable for new contributors,
-based on issues with help wanted or good first issue labels.
+Generate and maintain onboarding content to help community contributors get started.
 
-By default, it uses "help wanted" and "good first issue" as help labels.
-You can customize the help labels using the -l, --help-labels flag.
+This command will create or update an issue that summarizes all issues suitable for community contribution,
+organized by difficulty level and category. The content is designed to help new contributors find issues
+that match their interests and skill levels.
 
-You can also specify difficulty labels using the -d, --difficulty-labels flag.
-For example: -d "Easy,Medium,Hard"
+Examples:
+  # Update onboarding content with default settings
+  osp onboard
 
-You can also specify categories to group issues by using the -c, --categories flag.
-For example: -c "Category1,Category2,Category3"
+  # Use custom labels for finding beginner-friendly issues
+  osp onboard --onboard-labels="good first issue,help wanted"
+
+  # Use custom difficulty levels
+  osp onboard --difficulty-labels="difficulty/easy,difficulty/medium,difficulty/hard"
+
+  # Use custom categories within each difficulty level
+  osp onboard --category-labels="bug,feature,documentation"
+
+  # Preview changes without updating any issues
+  osp onboard --dry-run
+
+  # Update automatically without confirmation
+  osp onboard --yes
+
+  # Specify a custom label for the target issue
+  osp onboard --target-label="getting-started"
+
+  # Specify a custom title for the target issue
+  osp onboard --target-title="Onboarding: Getting Started with Contributing"
 
 ```
 osp onboard [flags]
@@ -24,10 +42,14 @@ osp onboard [flags]
 ### Options
 
 ```
-  -c, --categories strings          Categories to group issues by (default [bug,documentation,enhancement])
-  -d, --difficulty-labels strings   Difficulty labels, from easy to hard (default [good first issue,help wanted])
+  -c, --category-labels strings     Labels used to classify issues by type within each difficulty level (e.g., 'bug', 'feature') (default [bug,enhancement,documentation])
+  -d, --difficulty-labels strings   Labels used to indicate issue difficulty, ordered from easy to hard (e.g., 'difficulty/easy', 'difficulty/medium') (default [good first issue,help wanted])
+  -n, --dry-run                     Preview the changes without modifying any issues
   -h, --help                        help for onboard
-  -l, --help-labels strings         Help labels (default [good first issue,help wanted])
+  -o, --onboard-labels strings      Labels used to find issues suitable for community contribution (e.g., 'good first issue', 'help wanted') (default [help wanted,good first issue])
+  -t, --target-label string         Label used to locate the issue where onboarding content will be updated (default "onboarding")
+  -T, --target-title string         Title of the target issue where onboarding content will be updated (default "Onboarding: Getting Started with Contributing")
+  -y, --yes                         Automatically apply changes without confirmation
 ```
 
 ### Options inherited from parent commands

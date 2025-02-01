@@ -15,11 +15,12 @@ import (
 func newPlanCmd() *cobra.Command {
 	var (
 		planningLabel string
+		targetTitle   string
 		categories    []string
+		priorities    []string
 		excludePR     bool
 		dryRun        bool
 		autoConfirm   bool
-		priorities    []string
 	)
 
 	cmd := &cobra.Command{
@@ -32,6 +33,14 @@ organized by priority and category. The content is designed to help track milest
 progress and highlight high-priority tasks.
 
 If no milestone number is provided, it will scan all open milestones.
+
+Available fields in title template:
+  .Title       - Milestone title (e.g., "v1.0.0")
+  .Description - Milestone description
+  .Number      - Milestone number (e.g., 1)
+  .State       - Milestone state (e.g., "open" or "closed")
+  .DueOn       - Milestone due date (e.g., "2025-12-31T23:59:59Z")
+  .HTMLURL     - Milestone URL on GitHub
 
 Examples:
   # Update planning content for all open milestones
@@ -54,6 +63,12 @@ Examples:
 
   # Specify a custom label for the target issue
   osp plan --target-label="milestone-plan"
+
+  # Specify a custom title template for the target issue
+  osp plan --target-title="Planning: {{ .Title }}"
+
+  # Use milestone fields in title template
+  osp plan --target-title="Planning for {{ .Title }} (Due: {{ .DueOn.Format \"2006-01-02\" }})"
 
   # Exclude pull requests from planning content
   osp plan --exclude-pr`,
@@ -91,11 +106,12 @@ Examples:
 			// Create options
 			opts := planning.Options{
 				PlanningLabel: planningLabel,
+				TargetTitle:   targetTitle,
 				Categories:    categories,
+				Priorities:    priorities,
 				ExcludePR:     excludePR,
 				DryRun:        dryRun,
 				AutoConfirm:   autoConfirm,
-				Priorities:    priorities,
 			}
 
 			// If milestone number is provided, update that specific milestone
@@ -133,7 +149,8 @@ Examples:
 	}
 
 	// Add flags
-	cmd.Flags().StringVarP(&planningLabel, "target-label", "l", planning.DefaultOptions().PlanningLabel, "Label used to locate the issue where planning content will be updated")
+	cmd.Flags().StringVarP(&planningLabel, "target-label", "t", planning.DefaultOptions().PlanningLabel, "Label used to locate the issue where planning content will be updated")
+	cmd.Flags().StringVarP(&targetTitle, "target-title", "T", planning.DefaultOptions().TargetTitle, "Title template of the target issue where planning content will be updated")
 	cmd.Flags().StringSliceVarP(&categories, "category-labels", "c", planning.DefaultOptions().Categories, "Labels used to classify issues by type (e.g., 'bug', 'feature')")
 	cmd.Flags().StringSliceVarP(&priorities, "priority-labels", "p", planning.DefaultOptions().Priorities, "Labels used to indicate issue priority, ordered from high to low (e.g., 'priority/high', 'priority/medium')")
 	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning content")

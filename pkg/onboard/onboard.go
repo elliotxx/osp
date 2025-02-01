@@ -37,35 +37,37 @@ type OnboardIssue struct {
 	Category   string `json:"category"`
 }
 
-// Options represents the options for generating onboarding issues
+// Options represents the options for onboarding
 type Options struct {
-	OnboardLabels    []string `json:"onboard_labels"`
-	DifficultyLabels []string `json:"difficulty_labels"`
-	CategoryLabels   []string `json:"category_labels"`
+	// Issue labels configuration
+	OnboardLabels    []string // Labels for identifying suitable issues for community contributions
+	DifficultyLabels []string // Labels indicating the difficulty of issues
+	CategoryLabels   []string // Labels for classifying issues by type
+
+	// Target issue configuration
+	TargetLabel string // Label used to locate the issue where onboarding content will be updated
+	TargetTitle string // Title of the target issue where onboarding content will be updated
+
+	// Command behavior
+	DryRun      bool // If true, only show preview without making changes
+	AutoConfirm bool // If true, skip confirmation prompt
 }
 
-// OnboardOptions represents options for updating onboarding issues
-type OnboardOptions struct {
-	TargetLabel string // Label used to identify target issue
-	DryRun      bool   // If true, only show preview without making changes
-	AutoConfirm bool   // If true, skip confirmation prompt
-}
-
-// DefaultOnboardOptions returns default onboarding options
-func DefaultOnboardOptions() OnboardOptions {
-	return OnboardOptions{
-		TargetLabel: "onboarding",
-		DryRun:      false,
-		AutoConfirm: false,
-	}
-}
-
-// DefaultOptions returns default options for generating onboarding issues
+// DefaultOptions returns the default options
 func DefaultOptions() Options {
 	return Options{
-		OnboardLabels:    []string{"good first issue", "help wanted"},
+		// Issue labels defaults
+		OnboardLabels:    []string{"help wanted", "good first issue"},
 		DifficultyLabels: []string{"good first issue", "help wanted"},
-		CategoryLabels:   []string{"bug", "documentation", "enhancement"},
+		CategoryLabels:   []string{"bug", "enhancement", "documentation"},
+
+		// Target issue defaults
+		TargetLabel: "onboarding",
+		TargetTitle: "Onboarding: Getting Started with Contributing",
+
+		// Command behavior defaults
+		DryRun:      false,
+		AutoConfirm: false,
 	}
 }
 
@@ -387,7 +389,7 @@ func askForConfirmation(s string) bool {
 }
 
 // Update updates or creates an onboarding issue
-func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onboardOpts OnboardOptions) error {
+func (m *Manager) Update(ctx context.Context, repoName string, opts Options) error {
 	log.Debug("Updating onboarding issue in %s", repoName)
 
 	// Generate onboarding content
@@ -403,7 +405,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 	log.Debug("Generated onboarding content with %d bytes", len(content))
 
 	// Find existing onboarding issues
-	path := fmt.Sprintf("repos/%s/issues?labels=%s&state=all", repoName, onboardOpts.TargetLabel)
+	path := fmt.Sprintf("repos/%s/issues?labels=%s&state=all", repoName, opts.TargetLabel)
 	var existingIssues []struct {
 		Title  string `json:"title"`
 		Number int    `json:"number"`
@@ -415,7 +417,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 	log.Debug("Found %d existing issues with onboarding label", len(existingIssues))
 
 	// Find the onboarding issue with the smallest number
-	onboardingTitle := "Onboarding: Getting Started with Contributing"
+	onboardingTitle := opts.TargetTitle
 	var onboardingIssue *struct {
 		Title  string `json:"title"`
 		Number int    `json:"number"`
@@ -447,9 +449,9 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 	log.C(log.ColorBlue).P("↓").Log("Preview of the onboarding content:")
 	log.C(log.ColorCyan).Log("%s", content)
 
-	if !onboardOpts.DryRun {
+	if !opts.DryRun {
 		// Ask for confirmation if auto-confirm is not enabled
-		if !onboardOpts.AutoConfirm {
+		if !opts.AutoConfirm {
 			// Show update target
 			if onboardingIssue == nil {
 				log.Info("Will create a new onboarding issue with the above content")
@@ -472,7 +474,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 			body := map[string]interface{}{
 				"title":  onboardingTitle,
 				"body":   content,
-				"labels": []string{onboardOpts.TargetLabel},
+				"labels": []string{opts.TargetLabel},
 			}
 			bodyBytes, err := json.Marshal(body)
 			if err != nil {

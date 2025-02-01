@@ -4,14 +4,38 @@ Generate and update community planning
 
 ### Synopsis
 
-Generate and update community planning based on milestone issues.
-This command will create or update a planning issue that summarizes all issues
-in the specified milestone or all open milestones, categorized by their labels.
+Generate and maintain planning content to track milestone progress.
+
+This command will create or update an issue that summarizes all issues in a milestone,
+organized by priority and category. The content is designed to help track milestone
+progress and highlight high-priority tasks.
 
 If no milestone number is provided, it will scan all open milestones.
 
-By default, it will show the preview of the planning content and ask for confirmation
-before creating or updating the planning issue.
+Examples:
+  # Update planning content for all open milestones
+  osp plan
+
+  # Update planning content for milestone #1
+  osp plan 1
+
+  # Use custom category labels
+  osp plan --category-labels="bug,feature,documentation"
+
+  # Use custom priority labels
+  osp plan --priority-labels="priority/high,priority/medium,priority/low"
+
+  # Preview changes without updating any issues
+  osp plan --dry-run
+
+  # Update automatically without confirmation
+  osp plan --yes
+
+  # Specify a custom label for the target issue
+  osp plan --target-label="milestone-plan"
+
+  # Exclude pull requests from planning content
+  osp plan --exclude-pr
 
 ```
 osp plan [milestone-number] [flags]
@@ -20,13 +44,13 @@ osp plan [milestone-number] [flags]
 ### Options
 
 ```
-  -c, --categories strings   Categories to group issues by (default [bug,documentation,enhancement])
-  -d, --dry-run              Only show what would be done without making actual changes
-  -e, --exclude-pr           Exclude pull requests from planning (default true)
-  -h, --help                 help for plan
-  -l, --label string         Label to use for planning issues (default "planning")
-  -p, --priorities strings   Priority labels to sort issues by, from high to low. The first two labels will be shown in High Priority Tasks section. (default [priority/high,priority/medium,priority/low])
-  -y, --yes                  Skip confirmation and update automatically
+  -c, --category-labels strings   Labels used to classify issues by type (e.g., 'bug', 'feature') (default [bug,documentation,enhancement])
+  -n, --dry-run                   Preview the changes without modifying any issues
+  -e, --exclude-pr                Exclude pull requests from planning content (default true)
+  -h, --help                      help for plan
+  -p, --priority-labels strings   Labels used to indicate issue priority, ordered from high to low (e.g., 'priority/high', 'priority/medium') (default [priority/high,priority/medium,priority/low])
+  -t, --target-label string       Label used to locate the issue where planning content will be updated (default "planning")
+  -y, --yes                       Automatically apply changes without confirmation
 ```
 
 ### Options inherited from parent commands

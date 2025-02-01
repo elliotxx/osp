@@ -66,23 +66,25 @@ type Milestone struct {
 
 // Options represents planning options
 type Options struct {
-	PlanningLabel string
-	Categories    []string
-	ExcludePR     bool
-	DryRun        bool     // If true, only show the planning content without updating
-	AutoConfirm   bool     // If true, skip confirmation and update automatically
-	Priorities    []string // Priority labels to sort issues by, from high to low
+	PlanningLabel string   // Label used to locate the issue where planning content will be updated
+	TargetTitle   string   // Title template of the target issue where planning content will be updated
+	Categories    []string // Labels used to classify issues by type
+	Priorities    []string // Labels used to indicate issue priority, ordered from high to low
+	ExcludePR     bool     // If true, exclude pull requests from planning content
+	DryRun        bool     // If true, only show preview without making changes
+	AutoConfirm   bool     // If true, skip confirmation prompt
 }
 
 // DefaultOptions returns default planning options
 func DefaultOptions() Options {
 	return Options{
 		PlanningLabel: "planning",
-		ExcludePR:     true,
+		TargetTitle:   "Planning: {{ .Title }}",
+		Categories:    []string{"bug", "enhancement", "documentation"},
+		Priorities:    []string{"priority/high", "priority/medium", "priority/low"},
+		ExcludePR:     false,
 		DryRun:        false,
 		AutoConfirm:   false,
-		Categories:    []string{"bug", "documentation", "enhancement"},
-		Priorities:    []string{"priority/high", "priority/medium", "priority/low"},
 	}
 }
 
@@ -188,7 +190,7 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	}
 	log.Debug("Generated planning content with %d bytes", len(content))
 
-	// Find existing planning issue
+	// Find existing planning issues
 	path = fmt.Sprintf("repos/%s/%s/issues?labels=%s&state=all", owner, repo, opts.PlanningLabel)
 	var existingIssues []Issue
 	err = m.client.Get(path, &existingIssues)
@@ -197,7 +199,19 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	}
 	log.Debug("Found %d existing issues with planning label", len(existingIssues))
 
-	planningTitle := fmt.Sprintf("Planning: %s", milestone.Title)
+	// Render planning title
+	tmpl, err := template.New("title").Parse(opts.TargetTitle)
+	if err != nil {
+		return fmt.Errorf("failed to parse title template: %w", err)
+	}
+	var titleBuf bytes.Buffer
+	err = tmpl.Execute(&titleBuf, milestone)
+	if err != nil {
+		return fmt.Errorf("failed to execute title template: %w", err)
+	}
+	planningTitle := titleBuf.String()
+
+	// Find existing planning issue
 	var planningIssue *Issue
 	var minIssueNumber int = math.MaxInt32
 	for _, issue := range existingIssues {

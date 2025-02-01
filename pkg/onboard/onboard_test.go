@@ -75,9 +75,18 @@ func TestGenerateContent(t *testing.T) {
 
 	// Mock options
 	opts := Options{
+		// Issue labels configuration
 		OnboardLabels:    []string{"help wanted", "good first issue"},
 		DifficultyLabels: []string{"difficulty/easy", "difficulty/medium", "difficulty/hard"},
 		CategoryLabels:   []string{"bug", "enhancement", "documentation"},
+
+		// Target issue configuration
+		TargetLabel: "onboarding",
+		TargetTitle: "Community Tasks",
+
+		// Command behavior
+		DryRun:      false,
+		AutoConfirm: true,
 	}
 
 	// Create manager

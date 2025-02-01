@@ -23,7 +23,7 @@ osp [flags]
 ### SEE ALSO
 
 * [osp auth](osp_auth.md)	 - Authenticate with GitHub
-* [osp onboard](osp_onboard.md)	 - Generate community onboarding issues
+* [osp onboard](osp_onboard.md)	 - Manage onboarding content for community contributors
 * [osp plan](osp_plan.md)	 - Generate and update community planning
 * [osp repo](osp_repo.md)	 - Manage repositories
 * [osp star](osp_star.md)	 - Star related commands

@@ -41,7 +41,10 @@ Examples:
   osp onboard --yes
 
   # Specify a custom label for the target issue
-  osp onboard --target-label="getting-started"`,
+  osp onboard --target-label="getting-started"
+
+  # Specify a custom title for the target issue
+  osp onboard --target-title="Onboarding: Getting Started with Contributing"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -81,6 +84,10 @@ Examples:
 		if err != nil {
 			return err
 		}
+		targetTitle, err := cmd.Flags().GetString("target-title")
+		if err != nil {
+			return err
+		}
 		log.Debug("Onboard labels: [%s]", strings.Join(onboardLabels, ", "))
 		log.Debug("Difficulty labels: [%s]", strings.Join(difficultyLabels, ", "))
 		log.Debug("Category labels: [%s]", strings.Join(categoryLabels, ", "))
@@ -93,12 +100,16 @@ Examples:
 
 		// Create options
 		opts := onboard.Options{
+			// Issue labels configuration
 			OnboardLabels:    onboardLabels,
 			DifficultyLabels: difficultyLabels,
 			CategoryLabels:   categoryLabels,
-		}
-		onboardOpts := onboard.OnboardOptions{
+
+			// Target issue configuration
 			TargetLabel: targetLabel,
+			TargetTitle: targetTitle,
+
+			// Command behavior
 			DryRun:      dryRun,
 			AutoConfirm: autoConfirm,
 		}
@@ -107,7 +118,7 @@ Examples:
 		onboardManager := onboard.NewManager(cfg, client)
 
 		// Update onboarding issue
-		err = onboardManager.Update(cmd.Context(), repoName, opts, onboardOpts)
+		err = onboardManager.Update(cmd.Context(), repoName, opts)
 		if err != nil {
 			return fmt.Errorf("failed to update onboarding issue: %w", err)
 		}
@@ -120,10 +131,11 @@ func init() {
 	rootCmd.AddCommand(onboardCmd)
 
 	// Add flags
-	onboardCmd.Flags().StringSliceP("onboard-labels", "l", onboard.DefaultOptions().OnboardLabels, "Labels used to find issues suitable for community contribution (e.g., 'good first issue', 'help wanted')")
+	onboardCmd.Flags().StringSliceP("onboard-labels", "o", onboard.DefaultOptions().OnboardLabels, "Labels used to find issues suitable for community contribution (e.g., 'good first issue', 'help wanted')")
 	onboardCmd.Flags().StringSliceP("difficulty-labels", "d", onboard.DefaultOptions().DifficultyLabels, "Labels used to indicate issue difficulty, ordered from easy to hard (e.g., 'difficulty/easy', 'difficulty/medium')")
 	onboardCmd.Flags().StringSliceP("category-labels", "c", onboard.DefaultOptions().CategoryLabels, "Labels used to classify issues by type within each difficulty level (e.g., 'bug', 'feature')")
+	onboardCmd.Flags().StringP("target-label", "t", onboard.DefaultOptions().TargetLabel, "Label used to locate the issue where onboarding content will be updated")
+	onboardCmd.Flags().StringP("target-title", "T", onboard.DefaultOptions().TargetTitle, "Title of the target issue where onboarding content will be updated")
 	onboardCmd.Flags().BoolP("dry-run", "n", false, "Preview the changes without modifying any issues")
 	onboardCmd.Flags().BoolP("yes", "y", false, "Automatically apply changes without confirmation")
-	onboardCmd.Flags().String("target-label", onboard.DefaultOnboardOptions().TargetLabel, "Label used to locate the issue where onboarding content will be updated")
 }
