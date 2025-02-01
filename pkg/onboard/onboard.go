@@ -41,9 +41,11 @@ type Options struct {
 
 // Stats represents statistics about the issues
 type Stats struct {
-	TotalIssues      int `json:"total_issues"`
-	CompletedIssues  int `json:"completed_issues"`
-	InProgressIssues int `json:"in_progress_issues"`
+	TotalIssues      int      `json:"total_issues"`
+	CompletedIssues  int      `json:"completed_issues"`
+	InProgressIssues int      `json:"in_progress_issues"`
+	UnassignedIssues int      `json:"unassigned_issues"`
+	Contributors     []string `json:"contributors"`
 }
 
 // TemplateData represents the data passed to the template
@@ -210,6 +212,10 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		"urlEncode": func(s string) string {
 			return strings.ReplaceAll(s, " ", "%20")
 		},
+		"generateProgressBar": generateProgressBar,
+		"add": func(a, b int) int {
+			return a + b
+		},
 	})
 
 	tmpl, err := tmpl.ParseFS(templatesFS, "templates/*.gotmpl")
@@ -263,14 +269,30 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		TotalIssues:      len(uniqueIssues),
 		CompletedIssues:  0,
 		InProgressIssues: 0,
+		UnassignedIssues: 0,
 	}
+	
+	// Use map to track unique contributors
+	contributors := make(map[string]struct{})
+	
 	for _, issue := range uniqueIssues {
 		if issue.Status == "closed" {
 			stats.CompletedIssues++
+			if issue.Assignee != "" {
+				contributors[issue.Assignee] = struct{}{}
+			}
 		} else if issue.Assignee != "" {
 			stats.InProgressIssues++
+		} else {
+			stats.UnassignedIssues++
 		}
 	}
+	
+	// Convert contributors map to sorted slice
+	for contributor := range contributors {
+		stats.Contributors = append(stats.Contributors, contributor)
+	}
+	sort.Strings(stats.Contributors)
 
 	// Execute template
 	log.Debug("Executing template...")
@@ -287,4 +309,30 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 	}
 
 	return buf.String(), nil
+}
+
+// generateProgressBar generates a progress bar string based on completion percentage
+func generateProgressBar(completed, total int) string {
+	const width = 20 // Total width of the progress bar
+	if total == 0 {
+		return strings.Repeat("░", width) // Empty progress bar
+	}
+	
+	percentage := float64(completed) / float64(total)
+	filledWidth := int(percentage * float64(width))
+	
+	// Ensure at least one block is filled if there's any progress
+	if completed > 0 && filledWidth == 0 {
+		filledWidth = 1
+	}
+	
+	// Ensure we don't exceed the width
+	if filledWidth > width {
+		filledWidth = width
+	}
+	
+	filled := strings.Repeat("█", filledWidth)
+	empty := strings.Repeat("░", width-filledWidth)
+	
+	return filled + empty + fmt.Sprintf(" %.1f%%", percentage*100)
 }
