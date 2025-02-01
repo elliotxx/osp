@@ -1,0 +1,24 @@
+# Community tasks
+
+As a programming enthusiast, have you ever felt that you want to participate in the development of an open source project, but don't know where to start?
+
+In order to help everyone better participate in open source projects, we regularly publish issues suitable for new contributors to help everyone learn by doing!
+
+# Issue List
+{{ range $difficulty := .DifficultyLabels }}{{ if $difficulty }}{{ if $categoryMap := index $.IssuesByCategory $difficulty }}
+## {{ $difficulty }}
+{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}
+### {{ $category }}
+{{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
+{{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
+### Unclassified
+{{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
+{{ end }}{{ end }}{{ end }}{{ end }}{{ if $categoryMap := index $.IssuesByCategory "" }}
+## Unspecified difficulty
+{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}
+### {{ $category }}
+{{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
+{{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
+### Unclassified
+{{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
+{{ end }}{{ end }}{{ end }}{{ end }}
