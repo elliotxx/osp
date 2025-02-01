@@ -39,24 +39,33 @@ type OnboardIssue struct {
 
 // Options represents the options for generating onboarding issues
 type Options struct {
-	HelpLabels       []string `json:"help_labels"`
+	OnboardLabels    []string `json:"onboard_labels"`
 	DifficultyLabels []string `json:"difficulty_labels"`
-	Categories       []string `json:"categories"`
+	CategoryLabels   []string `json:"category_labels"`
 }
 
 // OnboardOptions represents options for updating onboarding issues
 type OnboardOptions struct {
-	OnboardingLabel string // Label used to identify onboarding issues
-	DryRun          bool   // If true, only show preview without making changes
-	AutoConfirm     bool   // If true, skip confirmation prompt
+	TargetLabel string // Label used to identify target issue
+	DryRun      bool   // If true, only show preview without making changes
+	AutoConfirm bool   // If true, skip confirmation prompt
 }
 
 // DefaultOnboardOptions returns default onboarding options
 func DefaultOnboardOptions() OnboardOptions {
 	return OnboardOptions{
-		OnboardingLabel: "onboarding",
-		DryRun:          false,
-		AutoConfirm:     false,
+		TargetLabel: "onboarding",
+		DryRun:      false,
+		AutoConfirm: false,
+	}
+}
+
+// DefaultOptions returns default options for generating onboarding issues
+func DefaultOptions() Options {
+	return Options{
+		OnboardLabels:    []string{"good first issue", "help wanted"},
+		DifficultyLabels: []string{"good first issue", "help wanted"},
+		CategoryLabels:   []string{"bug", "documentation", "enhancement"},
 	}
 }
 
@@ -74,9 +83,9 @@ type TemplateData struct {
 	RepoName         string                               `json:"repo_name"`
 	IssuesByCategory map[string]map[string][]OnboardIssue `json:"issues_by_category"`
 	DifficultyLabels []string                             `json:"difficulty_labels"`
-	Categories       []string                             `json:"categories"`
+	CategoryLabels   []string                             `json:"category_labels"`
 	Stats            Stats                                `json:"stats"`
-	HelpLabels       []string                             `json:"help_labels"`
+	OnboardLabels    []string                             `json:"onboard_labels"`
 }
 
 // NewManager creates a new onboard manager
@@ -100,9 +109,9 @@ func (m *Manager) SearchOnboardIssues(_ context.Context, repoName string, opts O
 	query = fmt.Sprintf("repo:%s is:issue", repoName)
 
 	// Add help labels
-	if len(opts.HelpLabels) > 0 {
+	if len(opts.OnboardLabels) > 0 {
 		query += " label:"
-		for i, label := range opts.HelpLabels {
+		for i, label := range opts.OnboardLabels {
 			if i > 0 {
 				query += ","
 			}
@@ -189,7 +198,7 @@ func (m *Manager) SearchOnboardIssues(_ context.Context, repoName string, opts O
 		// Determine category
 		category := ""
 		for _, label := range issue.Labels {
-			for _, categoryLabel := range opts.Categories {
+			for _, categoryLabel := range opts.CategoryLabels {
 				if strings.EqualFold(label.Name, categoryLabel) {
 					category = categoryLabel
 					break
@@ -317,9 +326,9 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		RepoName:         repoName,
 		IssuesByCategory: issuesByDiffCategory,
 		DifficultyLabels: opts.DifficultyLabels,
-		Categories:       opts.Categories,
+		CategoryLabels:   opts.CategoryLabels,
 		Stats:            stats,
-		HelpLabels:       opts.HelpLabels,
+		OnboardLabels:    opts.OnboardLabels,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
@@ -394,7 +403,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 	log.Debug("Generated onboarding content with %d bytes", len(content))
 
 	// Find existing onboarding issues
-	path := fmt.Sprintf("repos/%s/issues?labels=%s&state=all", repoName, onboardOpts.OnboardingLabel)
+	path := fmt.Sprintf("repos/%s/issues?labels=%s&state=all", repoName, onboardOpts.TargetLabel)
 	var existingIssues []struct {
 		Title  string `json:"title"`
 		Number int    `json:"number"`
@@ -463,7 +472,7 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options, onb
 			body := map[string]interface{}{
 				"title":  onboardingTitle,
 				"body":   content,
-				"labels": []string{onboardOpts.OnboardingLabel},
+				"labels": []string{onboardOpts.TargetLabel},
 			}
 			bodyBytes, err := json.Marshal(body)
 			if err != nil {

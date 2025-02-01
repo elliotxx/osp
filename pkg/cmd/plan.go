@@ -25,14 +25,38 @@ func newPlanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plan [milestone-number]",
 		Short: "Generate and update community planning",
-		Long: `Generate and update community planning based on milestone issues.
-This command will create or update a planning issue that summarizes all issues
-in the specified milestone or all open milestones, categorized by their labels.
+		Long: `Generate and maintain planning content to track milestone progress.
+
+This command will create or update an issue that summarizes all issues in a milestone,
+organized by priority and category. The content is designed to help track milestone
+progress and highlight high-priority tasks.
 
 If no milestone number is provided, it will scan all open milestones.
 
-By default, it will show the preview of the planning content and ask for confirmation
-before creating or updating the planning issue.`,
+Examples:
+  # Update planning content for all open milestones
+  osp plan
+
+  # Update planning content for milestone #1
+  osp plan 1
+
+  # Use custom category labels
+  osp plan --category-labels="bug,feature,documentation"
+
+  # Use custom priority labels
+  osp plan --priority-labels="priority/high,priority/medium,priority/low"
+
+  # Preview changes without updating any issues
+  osp plan --dry-run
+
+  # Update automatically without confirmation
+  osp plan --yes
+
+  # Specify a custom label for the target issue
+  osp plan --target-label="milestone-plan"
+
+  # Exclude pull requests from planning content
+  osp plan --exclude-pr`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get GitHub client
@@ -109,12 +133,12 @@ before creating or updating the planning issue.`,
 	}
 
 	// Add flags
-	cmd.Flags().StringVarP(&planningLabel, "label", "l", planning.DefaultOptions().PlanningLabel, "Label to use for planning issues")
-	cmd.Flags().StringSliceVarP(&categories, "categories", "c", planning.DefaultOptions().Categories, "Categories to group issues by")
-	cmd.Flags().StringSliceVarP(&priorities, "priorities", "p", planning.DefaultOptions().Priorities, "Priority labels to sort issues by, from high to low. The first two labels will be shown in High Priority Tasks section.")
-	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning")
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "d", planning.DefaultOptions().DryRun, "Only show what would be done without making actual changes")
-	cmd.Flags().BoolVarP(&autoConfirm, "yes", "y", planning.DefaultOptions().AutoConfirm, "Skip confirmation and update automatically")
+	cmd.Flags().StringVarP(&planningLabel, "target-label", "l", planning.DefaultOptions().PlanningLabel, "Label used to locate the issue where planning content will be updated")
+	cmd.Flags().StringSliceVarP(&categories, "category-labels", "c", planning.DefaultOptions().Categories, "Labels used to classify issues by type (e.g., 'bug', 'feature')")
+	cmd.Flags().StringSliceVarP(&priorities, "priority-labels", "p", planning.DefaultOptions().Priorities, "Labels used to indicate issue priority, ordered from high to low (e.g., 'priority/high', 'priority/medium')")
+	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning content")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", planning.DefaultOptions().DryRun, "Preview the changes without modifying any issues")
+	cmd.Flags().BoolVarP(&autoConfirm, "yes", "y", planning.DefaultOptions().AutoConfirm, "Automatically apply changes without confirmation")
 
 	return cmd
 }

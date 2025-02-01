@@ -75,9 +75,9 @@ func TestGenerateContent(t *testing.T) {
 
 	// Mock options
 	opts := Options{
-		HelpLabels:       []string{"help wanted", "good first issue"},
+		OnboardLabels:    []string{"help wanted", "good first issue"},
 		DifficultyLabels: []string{"difficulty/easy", "difficulty/medium", "difficulty/hard"},
-		Categories:       []string{"bug", "enhancement", "documentation"},
+		CategoryLabels:   []string{"bug", "enhancement", "documentation"},
 	}
 
 	// Create manager

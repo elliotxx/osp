@@ -1,9 +1,9 @@
 ## Overview 
 - Progress: {{ generateProgressBar .Stats.CompletedIssues .Stats.TotalIssues }}
-- [Total Issues: {{ .Stats.TotalIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .HelpLabels 0) }}%22{{ range slice .HelpLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
-  - ✅ [Completed: {{ .Stats.CompletedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aclosed+(label%3A%22{{ urlEncode (index .HelpLabels 0) }}%22{{ range slice .HelpLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
-  - 🚧 [In Progress: {{ .Stats.InProgressIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aopen+assignee%3A*+(label%3A%22{{ urlEncode (index .HelpLabels 0) }}%22{{ range slice .HelpLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
-  - 📋 [Unassigned: {{ .Stats.UnassignedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .HelpLabels 0) }}%22{{ range slice .HelpLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }})+no%3Aassignee)
+- [Total Issues: {{ .Stats.TotalIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
+  - ✅ [Completed: {{ .Stats.CompletedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aclosed+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
+  - 🚧 [In Progress: {{ .Stats.InProgressIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aopen+assignee%3A*+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
+  - 📋 [Unassigned: {{ .Stats.UnassignedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }})+no%3Aassignee)
 
 ## Description
 As a programming enthusiast, have you ever felt that you want to participate in the development of an open source project, but don't know where to start?
@@ -18,16 +18,16 @@ Thanks to all our contributors who have completed onboarding issues! Your contri
 > The following onboarding issues are organized first by difficulty level (from easy to hard), and then by category within each difficulty level.
 
 {{ range $difficulty := .DifficultyLabels }}{{ if $difficulty }}{{ if $categoryMap := index $.IssuesByCategory $difficulty }}
-### {{ $difficulty }}{{ $issueCount := 0 }}{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
-{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}
+### {{ $difficulty }}{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
+{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
 #### {{ $category }} ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
 #### Unclassified ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ end }}{{ if $categoryMap := index $.IssuesByCategory "" }}
-### Unspecified difficulty{{ $issueCount := 0 }}{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
-{{ range $category := $.Categories }}{{ if $issues := index $categoryMap $category }}
+### Unspecified difficulty{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
+{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
 #### {{ $category }} ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
