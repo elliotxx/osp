@@ -209,9 +209,7 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		"now": func() string {
 			return time.Now().UTC().Format("January 2, 2006 15:04 MST")
 		},
-		"urlEncode": func(s string) string {
-			return strings.ReplaceAll(s, " ", "%20")
-		},
+		"urlEncode":           url.QueryEscape,
 		"generateProgressBar": generateProgressBar,
 		"add": func(a, b int) int {
 			return a + b
@@ -271,23 +269,24 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		InProgressIssues: 0,
 		UnassignedIssues: 0,
 	}
-	
+
 	// Use map to track unique contributors
 	contributors := make(map[string]struct{})
-	
+
 	for _, issue := range uniqueIssues {
-		if issue.Status == "closed" {
+		switch {
+		case issue.Status == "closed":
 			stats.CompletedIssues++
 			if issue.Assignee != "" {
 				contributors[issue.Assignee] = struct{}{}
 			}
-		} else if issue.Assignee != "" {
+		case issue.Assignee != "":
 			stats.InProgressIssues++
-		} else {
+		default:
 			stats.UnassignedIssues++
 		}
 	}
-	
+
 	// Convert contributors map to sorted slice
 	for contributor := range contributors {
 		stats.Contributors = append(stats.Contributors, contributor)
@@ -317,22 +316,22 @@ func generateProgressBar(completed, total int) string {
 	if total == 0 {
 		return strings.Repeat("░", width) // Empty progress bar
 	}
-	
+
 	percentage := float64(completed) / float64(total)
 	filledWidth := int(percentage * float64(width))
-	
+
 	// Ensure at least one block is filled if there's any progress
 	if completed > 0 && filledWidth == 0 {
 		filledWidth = 1
 	}
-	
+
 	// Ensure we don't exceed the width
 	if filledWidth > width {
 		filledWidth = width
 	}
-	
+
 	filled := strings.Repeat("█", filledWidth)
 	empty := strings.Repeat("░", width-filledWidth)
-	
+
 	return filled + empty + fmt.Sprintf(" %.1f%%", percentage*100)
 }

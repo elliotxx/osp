@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -143,14 +144,28 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 	}
 	log.Debug("Found milestone: %s (#%d)", milestone.Title, milestone.Number)
 
-	// Get all issues in the milestone
-	var issues []Issue
-	path = fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all", owner, repo, milestoneNumber)
-	err = m.client.Get(path, &issues)
-	if err != nil {
-		return fmt.Errorf("failed to get issues: %w", err)
+	// Get all issues in the milestone with pagination
+	var allIssues []Issue
+	page := 1
+	for {
+		var issues []Issue
+		path = fmt.Sprintf("repos/%s/%s/issues?milestone=%d&state=all&page=%d&per_page=100", owner, repo, milestoneNumber, page)
+		err = m.client.Get(path, &issues)
+		if err != nil {
+			return fmt.Errorf("failed to get issues: %w", err)
+		}
+		
+		allIssues = append(allIssues, issues...)
+		log.Debug("Got %d issues from page %d", len(issues), page)
+		
+		// If we got less than per_page items, we've reached the end
+		if len(issues) < 100 {
+			break
+		}
+		page++
 	}
-	log.Debug("Found %d issues in milestone", len(issues))
+	issues := allIssues
+	log.Debug("Found total %d issues in milestone", len(issues))
 
 	// Filter out pull requests if exclude_pr is true
 	if opts.ExcludePR {
@@ -423,6 +438,7 @@ func (m *Manager) generatePlanningContentWithTime(data TemplateData, now time.Ti
 		"sub": func(a, b int) int {
 			return a - b
 		},
+		"urlEncode": url.QueryEscape,
 		"getPriorityLevel": func(labels []Label) int {
 			for _, label := range labels {
 				for i, priority := range data.Priorities {
