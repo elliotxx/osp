@@ -1,39 +1,42 @@
-## Overview 
+## Overview 🎯
 - Progress: {{ generateProgressBar .Stats.CompletedIssues .Stats.TotalIssues }}
 - [Total Issues: {{ .Stats.TotalIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
   - ✅ [Completed: {{ .Stats.CompletedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aclosed+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
   - 🚧 [In Progress: {{ .Stats.InProgressIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+is%3Aopen+assignee%3A*+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }}))
   - 📋 [Unassigned: {{ .Stats.UnassignedIssues }}](https://github.com/{{ .RepoName }}/issues?q=is%3Aissue+(label%3A%22{{ urlEncode (index .OnboardLabels 0) }}%22{{ range slice .OnboardLabels 1 }}+OR+label%3A%22{{ urlEncode . }}%22{{ end }})+no%3Aassignee)
 
-## Description
+## Description 📝
 As a programming enthusiast, have you ever felt that you want to participate in the development of an open source project, but don't know where to start?
 
-In order to help everyone better participate in open source projects, we regularly publish issues suitable for new contributors to help everyone learn by doing!
+In order to help everyone better participate in open source projects, we regularly publish issues suitable for new contributors to help everyone learn by doing! 🌟
 
-{{ if .Stats.Contributors }}## Contributors ({{ len .Stats.Contributors }})
-Thanks to all our contributors who have completed onboarding issues! Your contributions help make our project better:
-{{ range .Stats.Contributors }}@{{ . }} {{ end }}{{ end }}
+{{ if .Stats.Contributors }}## Contributors ({{ len .Stats.Contributors }}) 👥
+Thanks to all our amazing contributors who have completed onboarding issues! Your contributions make our project better! 
+> {{ range .Stats.Contributors }}@{{ . }} {{ end }}{{ end }}
 
-## Issue List ({{ .Stats.TotalIssues }})
-> The following onboarding issues are organized first by difficulty level (from easy to hard), and then by category within each difficulty level.
-
-{{ range $difficulty := .DifficultyLabels }}{{ if $difficulty }}{{ if $categoryMap := index $.IssuesByCategory $difficulty }}
-### Difficulty: {{ $difficulty }}{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
+## Issue List ({{ .Stats.TotalIssues }}) 📚
+> The following onboarding issues are organized first by difficulty level (**from easy to hard**), and then **by category** within each difficulty level.
+---
+{{ range $difficulty := .DifficultyLabels }}{{ if $categoryMap := index $.IssuesByCategory $difficulty }}
+### 🎯 Difficulty: **{{ $difficulty }}**{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
 {{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
-#### Category: {{ $category }} ({{ len $issues }})
+#### 📌 Category: **{{ $category }}** ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
-#### Unclassified ({{ len $issues }})
+#### 📌 Unclassified ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
-{{ end }}{{ end }}{{ end }}{{ end }}{{ if $categoryMap := index $.IssuesByCategory "" }}
-### Unspecified difficulty{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
+{{ end }}{{ end }}{{ end }}---{{ end }}
+
+{{ if hasUnspecifiedIssues .IssuesByCategory }}{{ if $categoryMap := index .IssuesByCategory "" }}
+### 🎯 Difficulty: **Unspecified**{{ $issueCount := 0 }}{{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}{{ $issueCount = add $issueCount (len $issues) }}{{ end }} ({{ $issueCount }})
 {{ range $category := $.CategoryLabels }}{{ if $issues := index $categoryMap $category }}
-#### Category: {{ $category }} ({{ len $issues }})
+#### 📌 Category: **{{ $category }}** ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ if $issues := index $categoryMap "" }}
-#### Unclassified ({{ len $issues }})
+#### 📌 Unclassified ({{ len $issues }})
 {{ range $issues }}- {{ if eq .Status "open" }}[ ]{{ else }}[x]{{ end }} #{{ .Number }}{{ if .Assignee }} {{ if eq .Status "open" }}**[@{{ .Assignee }} 's on it! 🚧]**{{ else }}**[@{{ .Assignee }} did it! Cheers! 🍻]**{{ end }}{{ end }}
 {{ end }}{{ end }}{{ end }}{{ end }}
+
 ---
 > 🤖 Auto-generated by [OSP](https://github.com/elliotxx/osp). DO NOT EDIT.
 > Last Updated: {{ now }}

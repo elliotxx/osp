@@ -247,6 +247,16 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"hasUnspecifiedIssues": func(issuesByCategory map[string]map[string][]OnboardIssue) bool {
+			if categoryMap, ok := issuesByCategory[""]; ok {
+				for _, issues := range categoryMap {
+					if len(issues) > 0 {
+						return true
+					}
+				}
+			}
+			return false
+		},
 	})
 
 	tmpl, err := tmpl.ParseFS(templatesFS, "templates/*.gotmpl")
@@ -254,31 +264,62 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Sort issues by number to ensure consistent ordering
-	log.Debug("Sorting issues...")
-	sort.Slice(issues, func(i, j int) bool {
-		return issues[i].Number < issues[j].Number
-	})
-
-	// Group issues by difficulty and category, ensuring uniqueness
-	log.Debug("Grouping issues...")
-	// Use map to ensure issue uniqueness
-	uniqueIssues := make(map[int]OnboardIssue)
-	for _, issue := range issues {
-		uniqueIssues[issue.Number] = issue
-	}
-
-	// Create a map of difficulty -> category -> issues
+	// Group issues by difficulty and category
 	issuesByDiffCategory := make(map[string]map[string][]OnboardIssue)
-	for _, issue := range uniqueIssues {
-		// Initialize maps if not exist
-		if _, ok := issuesByDiffCategory[issue.Difficulty]; !ok {
-			issuesByDiffCategory[issue.Difficulty] = make(map[string][]OnboardIssue)
+	uniqueIssues := make([]OnboardIssue, 0)
+
+	// Initialize maps for each difficulty level
+	for _, difficultyLabel := range opts.DifficultyLabels {
+		issuesByDiffCategory[difficultyLabel] = make(map[string][]OnboardIssue)
+	}
+	// Initialize map for unspecified difficulty (empty string)
+	issuesByDiffCategory[""] = make(map[string][]OnboardIssue)
+
+	// Create a map to track unique issues
+	uniqueIssueMap := make(map[int]struct{})
+
+	// Group issues by difficulty and category
+	for _, issue := range issues {
+		// Skip if we've already processed this issue
+		if _, ok := uniqueIssueMap[issue.Number]; ok {
+			continue
 		}
-		issuesByDiffCategory[issue.Difficulty][issue.Category] = append(issuesByDiffCategory[issue.Difficulty][issue.Category], issue)
+		uniqueIssueMap[issue.Number] = struct{}{}
+		uniqueIssues = append(uniqueIssues, issue)
+
+		var difficultyLabel string
+		var categoryLabel string
+
+		// Find difficulty label
+		if issue.Difficulty != "" {
+			for _, difficultyPrefix := range opts.DifficultyLabels {
+				if issue.Difficulty == difficultyPrefix {
+					difficultyLabel = issue.Difficulty
+					break
+				}
+			}
+		}
+
+		// Find category label
+		if issue.Category != "" {
+			for _, categoryPrefix := range opts.CategoryLabels {
+				if issue.Category == categoryPrefix {
+					categoryLabel = issue.Category
+					break
+				}
+			}
+		}
+
+		// Initialize category map if not exists
+		if _, ok := issuesByDiffCategory[difficultyLabel][categoryLabel]; !ok {
+			issuesByDiffCategory[difficultyLabel][categoryLabel] = make([]OnboardIssue, 0)
+		}
+
+		// Add issue to the appropriate category
+		issuesByDiffCategory[difficultyLabel][categoryLabel] = append(issuesByDiffCategory[difficultyLabel][categoryLabel], issue)
 	}
 
-	// Sort issues within each category
+	// Sort issues within each category by status (open before closed) and number
 	for difficulty := range issuesByDiffCategory {
 		for category := range issuesByDiffCategory[difficulty] {
 			sort.Slice(issuesByDiffCategory[difficulty][category], func(i, j int) bool {
@@ -291,9 +332,6 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 			})
 		}
 	}
-
-	// Create a buffer to store the output
-	var buf strings.Builder
 
 	// Calculate statistics
 	stats := Stats{
@@ -320,18 +358,20 @@ func (m *Manager) GenerateContent(issues []OnboardIssue, repoName string, opts O
 		}
 	}
 
-	// Convert contributors map to sorted slice
 	for contributor := range contributors {
 		stats.Contributors = append(stats.Contributors, contributor)
 	}
 	sort.Strings(stats.Contributors)
+
+	// Create a buffer to store the output
+	var buf strings.Builder
 
 	// Execute template
 	log.Debug("Executing template...")
 	err = tmpl.ExecuteTemplate(&buf, "onboard.gotmpl", TemplateData{
 		RepoName:         repoName,
 		IssuesByCategory: issuesByDiffCategory,
-		DifficultyLabels: opts.DifficultyLabels,
+		DifficultyLabels: opts.DifficultyLabels, // 不包含空字符串，让模版决定何时显示未指定难度的 issue
 		CategoryLabels:   opts.CategoryLabels,
 		Stats:            stats,
 		OnboardLabels:    opts.OnboardLabels,

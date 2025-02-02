@@ -61,7 +61,7 @@ func (m *Manager) Get(ctx context.Context, repoName string) (*Stats, error) {
 
 	// Create request
 	url := fmt.Sprintf("https://api.github.com/repos/%s", repoName)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -176,7 +176,7 @@ func (m *Manager) getStarEvents(ctx context.Context, repoName, token string, fro
 	for {
 		// Create request
 		url := fmt.Sprintf("%s?page=%d&per_page=%d", baseURL, page, perPage)
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
