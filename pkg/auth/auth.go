@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cli/oauth/device"
+	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/zalando/go-keyring"
 )
@@ -91,11 +92,7 @@ func Logout() error {
 
 	if err := keyring.Delete(serviceName, username); err != nil {
 		// If keyring is unavailable, attempt to delete the config file
-		configDir, err := getConfigDir()
-		if err != nil {
-			return err
-		}
-		tokenFile := filepath.Join(configDir, "token")
+		tokenFile := filepath.Join(config.GetConfigDir(), "token")
 		if err := os.Remove(tokenFile); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove token file: %w", err)
 		}
@@ -133,12 +130,7 @@ func GetToken() (string, error) {
 
 	// If keyring is not available, try config file
 	log.Debug("Keyring not available, trying config file...")
-	configDir, err := getConfigDir()
-	if err != nil {
-		return "", err
-	}
-
-	tokenFile := filepath.Join(configDir, "token")
+	tokenFile := filepath.Join(config.GetConfigDir(), "token")
 	log.Debug("Attempting to read token from file: %s", tokenFile)
 	data, err := os.ReadFile(tokenFile)
 	if err != nil {
@@ -243,13 +235,7 @@ func GetStatus() ([]*Status, error) {
 			log.Debug("Failed to get token from keyring: %v", err)
 			// Try config file
 			log.Debug("Attempting to get token from config file...")
-			configDir, err := getConfigDir()
-			if err != nil {
-				log.Debug("Failed to get config directory: %v", err)
-				return statuses, nil
-			}
-
-			tokenFile := filepath.Join(configDir, "token")
+			tokenFile := filepath.Join(config.GetConfigDir(), "token")
 			data, err := os.ReadFile(tokenFile)
 			if err != nil {
 				log.Debug("Failed to read token file: %v", err)
@@ -404,61 +390,37 @@ func getTokenScopes(token string) ([]string, error) {
 
 // storeToken stores the token securely
 func storeToken(username, token string) error {
-	// 1. Create config directory
-	configDir, err := getConfigDir()
-	if err != nil {
-		return err
-	}
+	// Get config directory
+	configDir := config.GetConfigDir()
 
-	if err := os.MkdirAll(configDir, 0o700); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// 2. Store username
+	// Store username
 	usernameFile := filepath.Join(configDir, "username")
 	if err := os.WriteFile(usernameFile, []byte(username), 0o600); err != nil {
 		return fmt.Errorf("failed to store username: %w", err)
 	}
 
-	// 3. Try to store token in keyring
-	err = keyring.Set(serviceName, username, token)
+	// Try to store token in keyring
+	err := keyring.Set(serviceName, username, token)
 	if err == nil {
 		return nil
 	}
 
-	// 4. If keyring is not available, store token in config file
+	// If keyring is not available, store token in config file
 	tokenFile := filepath.Join(configDir, "token")
 	return os.WriteFile(tokenFile, []byte(token), 0o600)
 }
 
 // getStoredUsername gets the username from the config file
 func getStoredUsername() (string, error) {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return "", err
-	}
-
-	usernameFile := filepath.Join(configDir, "username")
+	usernameFile := filepath.Join(config.GetConfigDir(), "username")
 	data, err := os.ReadFile(usernameFile)
 	if err != nil {
-		return "", fmt.Errorf("no stored username found")
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
 	}
-
-	username := strings.TrimSpace(string(data))
-	if username == "" {
-		return "", fmt.Errorf("invalid stored username")
-	}
-
-	return username, nil
-}
-
-// getConfigDir returns the configuration directory
-func getConfigDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-	return filepath.Join(homeDir, ".config", "osp"), nil
+	return string(data), nil
 }
 
 // openBrowser opens the specified URL in the default browser
