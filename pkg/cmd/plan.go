@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/planning"
@@ -12,17 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newPlanCmd() *cobra.Command {
-	var (
-		planningLabel string
-		targetTitle   string
-		categories    []string
-		priorities    []string
-		excludePR     bool
-		dryRun        bool
-		autoConfirm   bool
-	)
+var (
+	planningLabel string
+	targetTitle   string
+	categories    []string
+	priorities    []string
+	excludePR     bool
+	dryRun        bool
+	autoConfirm   bool
+)
 
+func newPlanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plan [milestone-number]",
 		Short: "Generate and update community planning",
@@ -73,79 +74,7 @@ Examples:
   # Exclude pull requests from planning content
   osp plan --exclude-pr`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get GitHub client
-			client, err := api.DefaultRESTClient()
-			if err != nil {
-				return fmt.Errorf("failed to create GitHub client: %w", err)
-			}
-
-			// Get config
-			cfg, err := config.Load("")
-			if err != nil {
-				return fmt.Errorf("failed to load config: %w", err)
-			}
-
-			// Get current repository
-			repoManager := repo.NewManager(cfg)
-			currentRepo := repoManager.Current()
-			if currentRepo == "" {
-				return fmt.Errorf("no repository selected, please use 'osp repo current' to select one")
-			}
-
-			// Parse owner and repo from current repository
-			parts := strings.Split(currentRepo, "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s", currentRepo)
-			}
-			owner, repoName := parts[0], parts[1]
-
-			// Create plan manager
-			manager := planning.NewManager(client)
-
-			// Create options
-			opts := planning.Options{
-				PlanningLabel: planningLabel,
-				TargetTitle:   targetTitle,
-				Categories:    categories,
-				Priorities:    priorities,
-				ExcludePR:     excludePR,
-				DryRun:        dryRun,
-				AutoConfirm:   autoConfirm,
-			}
-
-			// If milestone number is provided, update that specific milestone
-			if len(args) > 0 {
-				var milestoneNumber int
-				_, err := fmt.Sscanf(args[0], "%d", &milestoneNumber)
-				if err != nil {
-					return fmt.Errorf("invalid milestone number: %w", err)
-				}
-
-				return manager.Update(cmd.Context(), owner, repoName, milestoneNumber, opts)
-			}
-
-			// Otherwise, get all open milestones and update their planning
-			milestones, err := manager.ListOpenMilestones(cmd.Context(), owner, repoName)
-			if err != nil {
-				return fmt.Errorf("failed to list open milestones: %w", err)
-			}
-
-			if len(milestones) == 0 {
-				log.Info("No open milestones found")
-				return nil
-			}
-
-			log.Info("Found %d open milestones", len(milestones))
-			for _, m := range milestones {
-				if err := manager.Update(cmd.Context(), owner, repoName, m.Number, opts); err != nil {
-					log.Error("Failed to update planning for milestone %d: %v", m.Number, err)
-					continue
-				}
-			}
-
-			return nil
-		},
+		RunE: runPlanUpdate,
 	}
 
 	// Add flags
@@ -158,4 +87,83 @@ Examples:
 	cmd.Flags().BoolVarP(&autoConfirm, "yes", "y", planning.DefaultOptions().AutoConfirm, "Automatically apply changes without confirmation")
 
 	return cmd
+}
+
+func runPlanUpdate(cmd *cobra.Command, args []string) error {
+	// Check authentication
+	if err := auth.CheckAuth(); err != nil {
+		return err
+	}
+
+	// Load config
+	cfg, err := config.Load("")
+	if err != nil {
+		return err
+	}
+
+	// Get GitHub client
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return fmt.Errorf("failed to create GitHub client: %w", err)
+	}
+
+	// Get current repository
+	repoManager := repo.NewManager(cfg)
+	currentRepo := repoManager.Current()
+	if currentRepo == "" {
+		return fmt.Errorf("no repository selected, please use 'osp repo current' to select one")
+	}
+
+	// Parse owner and repo from current repository
+	parts := strings.Split(currentRepo, "/")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid repository format: %s", currentRepo)
+	}
+	owner, repoName := parts[0], parts[1]
+
+	// Create plan manager
+	manager := planning.NewManager(client)
+
+	// Create options
+	opts := planning.Options{
+		PlanningLabel: planningLabel,
+		TargetTitle:   targetTitle,
+		Categories:    categories,
+		Priorities:    priorities,
+		ExcludePR:     excludePR,
+		DryRun:        dryRun,
+		AutoConfirm:   autoConfirm,
+	}
+
+	// If milestone number is provided, update that specific milestone
+	if len(args) > 0 {
+		var milestoneNumber int
+		_, err := fmt.Sscanf(args[0], "%d", &milestoneNumber)
+		if err != nil {
+			return fmt.Errorf("invalid milestone number: %w", err)
+		}
+
+		return manager.Update(cmd.Context(), owner, repoName, milestoneNumber, opts)
+	}
+
+	// Otherwise, get all open milestones and update their planning
+	milestones, err := manager.ListOpenMilestones(cmd.Context(), owner, repoName)
+	if err != nil {
+		return fmt.Errorf("failed to list open milestones: %w", err)
+	}
+
+	if len(milestones) == 0 {
+		log.Info("No open milestones found")
+		return nil
+	}
+
+	log.Info("Found %d open milestones", len(milestones))
+	for _, m := range milestones {
+		if err := manager.Update(cmd.Context(), owner, repoName, m.Number, opts); err != nil {
+			log.Error("Failed to update planning for milestone %d: %v", m.Number, err)
+			continue
+		}
+	}
+
+	return nil
 }

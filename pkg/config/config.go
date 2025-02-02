@@ -23,6 +23,16 @@ type Config struct {
 	Repositories []string `yaml:"repositories"`
 }
 
+// GetConfigHome returns XDG_CONFIG_HOME
+func GetConfigHome() string {
+	return xdg.ConfigHome
+}
+
+// GetStateHome returns XDG_STATE_HOME
+func GetStateHome() string {
+	return xdg.StateHome
+}
+
 // GetConfigDir returns the configuration directory path
 func GetConfigDir() string {
 	configDir := filepath.Join(xdg.ConfigHome, "osp")
@@ -40,6 +50,11 @@ func GetConfigDir() string {
 	}
 
 	return configDir
+}
+
+// GetStateDir returns OSP state directory
+func GetStateDir() string {
+	return filepath.Join(xdg.StateHome, "osp")
 }
 
 // getConfigPath returns the path to the config file

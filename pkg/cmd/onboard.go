@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/onboard"
@@ -45,86 +46,94 @@ Examples:
 
   # Specify a custom title for the target issue
   osp onboard --target-title="Onboarding: Getting Started with Contributing"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load("")
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
+	RunE: runOnboardUpdate,
+}
 
-		// Get repository name
-		repoManager := repo.NewManager(cfg)
-		repoName := repoManager.Current()
-		if repoName == "" {
-			return fmt.Errorf("no repository selected, use 'osp repo switch' to select a repository first")
-		}
-		log.Debug("Generating onboarding issues for %s", repoName)
+func runOnboardUpdate(cmd *cobra.Command, _ []string) error {
+	// Check authentication
+	if err := auth.CheckAuth(); err != nil {
+		return err
+	}
 
-		// Get flags
-		onboardLabels, err := cmd.Flags().GetStringSlice("onboard-labels")
-		if err != nil {
-			return err
-		}
-		difficultyLabels, err := cmd.Flags().GetStringSlice("difficulty-labels")
-		if err != nil {
-			return err
-		}
-		categoryLabels, err := cmd.Flags().GetStringSlice("category-labels")
-		if err != nil {
-			return err
-		}
-		dryRun, err := cmd.Flags().GetBool("dry-run")
-		if err != nil {
-			return err
-		}
-		autoConfirm, err := cmd.Flags().GetBool("yes")
-		if err != nil {
-			return err
-		}
-		targetLabel, err := cmd.Flags().GetString("target-label")
-		if err != nil {
-			return err
-		}
-		targetTitle, err := cmd.Flags().GetString("target-title")
-		if err != nil {
-			return err
-		}
-		log.Debug("Onboard labels: [%s]", strings.Join(onboardLabels, ", "))
-		log.Debug("Difficulty labels: [%s]", strings.Join(difficultyLabels, ", "))
-		log.Debug("Category labels: [%s]", strings.Join(categoryLabels, ", "))
+	// Load config
+	cfg, err := config.Load("")
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
 
-		// Create GitHub client
-		client, err := api.DefaultRESTClient()
-		if err != nil {
-			return fmt.Errorf("failed to create GitHub client: %w", err)
-		}
+	// Get repository name
+	repoManager := repo.NewManager(cfg)
+	repoName := repoManager.Current()
+	if repoName == "" {
+		return fmt.Errorf("no repository selected, use 'osp repo switch' to select a repository first")
+	}
+	log.Debug("Generating onboarding issues for %s", repoName)
 
-		// Create options
-		opts := onboard.Options{
-			// Issue labels configuration
-			OnboardLabels:    onboardLabels,
-			DifficultyLabels: difficultyLabels,
-			CategoryLabels:   categoryLabels,
+	// Get flags
+	onboardLabels, err := cmd.Flags().GetStringSlice("onboard-labels")
+	if err != nil {
+		return err
+	}
+	difficultyLabels, err := cmd.Flags().GetStringSlice("difficulty-labels")
+	if err != nil {
+		return err
+	}
+	categoryLabels, err := cmd.Flags().GetStringSlice("category-labels")
+	if err != nil {
+		return err
+	}
+	dryRun, err := cmd.Flags().GetBool("dry-run")
+	if err != nil {
+		return err
+	}
+	autoConfirm, err := cmd.Flags().GetBool("yes")
+	if err != nil {
+		return err
+	}
+	targetLabel, err := cmd.Flags().GetString("target-label")
+	if err != nil {
+		return err
+	}
+	targetTitle, err := cmd.Flags().GetString("target-title")
+	if err != nil {
+		return err
+	}
+	log.Debug("Onboard labels: [%s]", strings.Join(onboardLabels, ", "))
+	log.Debug("Difficulty labels: [%s]", strings.Join(difficultyLabels, ", "))
+	log.Debug("Category labels: [%s]", strings.Join(categoryLabels, ", "))
 
-			// Target issue configuration
-			TargetLabel: targetLabel,
-			TargetTitle: targetTitle,
+	// Create GitHub client
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return fmt.Errorf("failed to create GitHub client: %w", err)
+	}
 
-			// Command behavior
-			DryRun:      dryRun,
-			AutoConfirm: autoConfirm,
-		}
+	// Create options
+	opts := onboard.Options{
+		// Issue labels configuration
+		OnboardLabels:    onboardLabels,
+		DifficultyLabels: difficultyLabels,
+		CategoryLabels:   categoryLabels,
 
-		// Create onboard manager
-		onboardManager := onboard.NewManager(cfg, client)
+		// Target issue configuration
+		TargetLabel: targetLabel,
+		TargetTitle: targetTitle,
 
-		// Update onboarding issue
-		err = onboardManager.Update(cmd.Context(), repoName, opts)
-		if err != nil {
-			return fmt.Errorf("failed to update onboarding issue: %w", err)
-		}
+		// Command behavior
+		DryRun:      dryRun,
+		AutoConfirm: autoConfirm,
+	}
 
-		return nil
-	},
+	// Create onboard manager
+	onboardManager := onboard.NewManager(cfg, client)
+
+	// Update onboarding issue
+	err = onboardManager.Update(cmd.Context(), repoName, opts)
+	if err != nil {
+		return fmt.Errorf("failed to update onboarding issue: %w", err)
+	}
+
+	return nil
 }
 
 func init() {

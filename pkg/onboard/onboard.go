@@ -1,14 +1,12 @@
 package onboard
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"text/template"
@@ -17,6 +15,7 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
+	"github.com/elliotxx/osp/pkg/util/prompt"
 )
 
 //go:embed templates/*.gotmpl
@@ -365,29 +364,6 @@ func generateProgressBar(completed, total int) string {
 	return filled + empty + fmt.Sprintf(" %.1f%%", percentage*100)
 }
 
-// askForConfirmation asks the user for confirmation
-func askForConfirmation(s string) bool {
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		fmt.Printf("%s [y/n]: ", s)
-
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			log.Error("Error reading input: %v", err)
-			return false
-		}
-
-		response = strings.ToLower(strings.TrimSpace(response))
-
-		if response == "y" || response == "yes" {
-			return true
-		} else if response == "n" || response == "no" {
-			return false
-		}
-	}
-}
-
 // Update updates or creates an onboarding issue
 func (m *Manager) Update(ctx context.Context, repoName string, opts Options) error {
 	log.Debug("Updating onboarding issue in %s", repoName)
@@ -457,7 +433,11 @@ func (m *Manager) Update(ctx context.Context, repoName string, opts Options) err
 				log.Info("Will update existing onboarding issue (%s) with the above content", issueURL)
 			}
 
-			if !askForConfirmation("Do you want to proceed with the update?") {
+			confirmed, err := prompt.AskForConfirmation("Do you want to proceed with the update?")
+			if err != nil {
+				return err
+			}
+			if !confirmed {
 				log.Info("Update cancelled")
 				return nil
 			}

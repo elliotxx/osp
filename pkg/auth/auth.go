@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,6 +30,9 @@ const (
 	// GitHub API endpoints
 	githubAPI = "https://api.github.com"
 )
+
+// ErrNotAuthenticated is returned when user is not authenticated
+var ErrNotAuthenticated = errors.New("not authenticated")
 
 // Login performs GitHub OAuth device flow login
 func Login() (string, error) {
@@ -181,46 +185,44 @@ func GetStatus() ([]*Status, error) {
 	// Then check stored token
 	log.Debug("Checking stored credentials...")
 	username, err := getStoredUsername()
-	if err == nil {
-		log.Debug("Found stored username: %s", username)
-		// Try keyring first
-		log.Debug("Attempting to get token from keyring...")
-		token, err := keyring.Get(serviceName, username)
-		if err == nil {
-			log.Debug("Successfully retrieved token from keyring")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stored username: %w", err)
+	}
+	log.Debug("Found stored username: %s", username)
 
-			// Validate token
-			if err := validateToken(token); err != nil {
-				log.Warn("Failed to validate token from keyring: %v", err)
-			} else {
-				log.Debug("Token validated successfully")
+	// Try keyring
+	log.Debug("Attempting to get token from keyring...")
+	token, err := keyring.Get(serviceName, username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from system keyring: %w", err)
+	}
+	log.Debug("Successfully retrieved token from keyring")
 
-				// Get token scopes
-				log.Debug("Getting token scopes...")
-				scopes, err := getTokenScopes(token)
-				if err != nil {
-					log.Warn("Failed to get token scopes: %v", err)
-					scopes = []string{"unknown"}
-				} else {
-					log.Debug("Token scopes: %v", scopes)
-				}
-
-				statuses = append(statuses, &Status{
-					Username:     username,
-					Token:        token,
-					TokenDisplay: token[:3] + strings.Repeat("*", 37),
-					StorageType:  "keyring",
-					IsKeyring:    true,
-					Scopes:       scopes,
-					Active:       len(statuses) == 0, // Active only if no env token
-				})
-			}
-		} else {
-			log.Debug("Failed to get token from keyring: %v", err)
-			return statuses, nil
-		}
+	// Validate token
+	if err := validateToken(token); err != nil {
+		log.Warn("Failed to validate token from keyring: %v", err)
 	} else {
-		log.Debug("No stored username found: %v", err)
+		log.Debug("Token validated successfully")
+
+		// Get token scopes
+		log.Debug("Getting token scopes...")
+		scopes, err := getTokenScopes(token)
+		if err != nil {
+			log.Warn("Failed to get token scopes: %v", err)
+			scopes = []string{"unknown"}
+		} else {
+			log.Debug("Token scopes: %v", scopes)
+		}
+
+		statuses = append(statuses, &Status{
+			Username:     username,
+			Token:        token,
+			TokenDisplay: token[:3] + strings.Repeat("*", 37),
+			StorageType:  "keyring",
+			IsKeyring:    true,
+			Scopes:       scopes,
+			Active:       len(statuses) == 0, // Active only if no env token
+		})
 	}
 
 	log.Debug("Found %d authentication methods", len(statuses))
@@ -362,11 +364,15 @@ func getStoredUsername() (string, error) {
 	data, err := os.ReadFile(usernameFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", nil
+			return "", fmt.Errorf("username file not found")
 		}
 		return "", err
 	}
-	return string(data), nil
+	username := strings.TrimSpace(string(data))
+	if username == "" {
+		return "", fmt.Errorf("stored username is empty")
+	}
+	return username, nil
 }
 
 // openBrowser opens the specified URL in the default browser
@@ -383,10 +389,4 @@ func openBrowser(url string) error {
 		err = fmt.Errorf("unsupported platform")
 	}
 	return err
-}
-
-// HasToken checks if a token is stored
-func HasToken() bool {
-	_, err := GetToken()
-	return err == nil
 }

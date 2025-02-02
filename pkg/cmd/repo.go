@@ -169,6 +169,7 @@ var repoSwitchCmd = &cobra.Command{
 	Long:  `Switch the current repository being managed.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Load config
 		cfg, err := config.Load("")
 		if err != nil {
 			return err
@@ -188,6 +189,7 @@ var repoCurrentCmd = &cobra.Command{
 	Use:   "current",
 	Short: "Show current repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Load config
 		cfg, err := config.Load("")
 		if err != nil {
 			return err

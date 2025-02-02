@@ -1,7 +1,6 @@
 package planning
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"embed"
@@ -9,7 +8,6 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"text/template"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/elliotxx/osp/pkg/log"
+	"github.com/elliotxx/osp/pkg/util/prompt"
 )
 
 //go:embed templates/planning.gotmpl
@@ -108,29 +107,6 @@ type TemplateData struct {
 	Priorities          []string
 	RepoOwner           string
 	RepoName            string
-}
-
-// askForConfirmation asks the user for confirmation
-func askForConfirmation(s string) bool {
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		log.P("?").C(log.ColorBlue).N().Log("%s [y/n]: ", s)
-
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			log.Error("Error reading input: %v", err)
-			return false
-		}
-
-		response = strings.ToLower(strings.TrimSpace(response))
-
-		if response == "y" || response == "yes" {
-			return true
-		} else if response == "n" || response == "no" {
-			return false
-		}
-	}
 }
 
 // Update updates or creates a planning issue for a milestone
@@ -246,7 +222,11 @@ func (m *Manager) Update(ctx context.Context, owner, repo string, milestoneNumbe
 				log.Info("Will update existing planning issue (%s) with the above content", issueURL)
 			}
 
-			if !askForConfirmation("Do you want to proceed with the update?") {
+			confirmed, err := prompt.AskForConfirmation("Do you want to proceed with the update?")
+			if err != nil {
+				return err
+			}
+			if !confirmed {
 				log.Info("Update cancelled")
 				return nil
 			}
