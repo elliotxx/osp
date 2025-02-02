@@ -32,7 +32,7 @@ func GetConfigDir() string {
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		log.Debug("Config directory does not exist: %s", configDir)
 		// Create config directory with proper permissions
-		if err := os.MkdirAll(configDir, 0700); err != nil {
+		if err := os.MkdirAll(configDir, 0o700); err != nil {
 			log.Debug("Failed to create config directory: %v", err)
 			return "."
 		}
@@ -43,21 +43,17 @@ func GetConfigDir() string {
 }
 
 // getConfigPath returns the path to the config file
-func getConfigPath() (string, error) {
+func getConfigPath() string {
 	// Get the config file path according to XDG specification
 	configPath := filepath.Join(GetConfigDir(), "config.yml")
 	log.Debug("Config file path: %s", configPath)
-	return configPath, nil
+	return configPath
 }
 
 // Load loads the configuration from file
 func Load(path string) (*Config, error) {
 	if path == "" {
-		var err error
-		path, err = getConfigPath()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get config path: %w", err)
-		}
+		path = getConfigPath()
 	}
 	log.Debug("Loading config from: %s", path)
 
@@ -91,10 +87,7 @@ func Load(path string) (*Config, error) {
 
 // Save saves the configuration to file
 func (c *Config) Save() error {
-	path, err := getConfigPath()
-	if err != nil {
-		return fmt.Errorf("failed to get config path: %w", err)
-	}
+	path := getConfigPath()
 	log.Debug("Saving config to: %s", path)
 
 	// Backup existing config if it exists
@@ -113,7 +106,7 @@ func (c *Config) Save() error {
 	}
 
 	// Write config file
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		// Try to restore backup if write failed
 		if _, err := os.Stat(backupPath); err == nil {
 			log.Debug("Write failed, attempting to restore backup")

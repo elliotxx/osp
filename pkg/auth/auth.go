@@ -91,11 +91,7 @@ func Logout() error {
 	}
 
 	if err := keyring.Delete(serviceName, username); err != nil {
-		// If keyring is unavailable, attempt to delete the config file
-		tokenFile := filepath.Join(config.GetConfigDir(), "token")
-		if err := os.Remove(tokenFile); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove token file: %w", err)
-		}
+		return fmt.Errorf("failed to remove token from system keyring: %w", err)
 	}
 	return nil
 }
@@ -122,23 +118,11 @@ func GetToken() (string, error) {
 	// Try to get token from keyring
 	log.Debug("Attempting to get token from keyring for user %s...", username)
 	token, err := keyring.Get(serviceName, username)
-	if err == nil {
-		log.Debug("Successfully retrieved token from keyring")
-		return token, nil
-	}
-	log.Debug("Failed to get token from keyring: %v", err)
-
-	// If keyring is not available, try config file
-	log.Debug("Keyring not available, trying config file...")
-	tokenFile := filepath.Join(config.GetConfigDir(), "token")
-	log.Debug("Attempting to read token from file: %s", tokenFile)
-	data, err := os.ReadFile(tokenFile)
 	if err != nil {
-		return "", fmt.Errorf("no authentication token found, please run 'osp auth login' first")
+		return "", fmt.Errorf("failed to get token from system keyring: %w", err)
 	}
-
-	log.Debug("Successfully read token from file")
-	return strings.TrimSpace(string(data)), nil
+	log.Debug("Successfully retrieved token from keyring")
+	return token, nil
 }
 
 // GetStatus returns the current authentication status
@@ -233,43 +217,7 @@ func GetStatus() ([]*Status, error) {
 			}
 		} else {
 			log.Debug("Failed to get token from keyring: %v", err)
-			// Try config file
-			log.Debug("Attempting to get token from config file...")
-			tokenFile := filepath.Join(config.GetConfigDir(), "token")
-			data, err := os.ReadFile(tokenFile)
-			if err != nil {
-				log.Debug("Failed to read token file: %v", err)
-				return statuses, nil
-			}
-			token := strings.TrimSpace(string(data))
-			log.Debug("Successfully read token from file")
-
-			// Validate token
-			if err := validateToken(token); err != nil {
-				log.Warn("Failed to validate token from file: %v", err)
-			} else {
-				log.Debug("Token validated successfully")
-
-				// Get token scopes
-				log.Debug("Getting token scopes...")
-				scopes, err := getTokenScopes(token)
-				if err != nil {
-					log.Debug("Failed to get token scopes: %v", err)
-					scopes = []string{"unknown"}
-				} else {
-					log.Debug("Token scopes: %v", scopes)
-				}
-
-				statuses = append(statuses, &Status{
-					Username:     username,
-					Token:        token,
-					TokenDisplay: token[:3] + strings.Repeat("*", 37),
-					StorageType:  "config",
-					IsKeyring:    false,
-					Scopes:       scopes,
-					Active:       len(statuses) == 0, // Active only if no env token
-				})
-			}
+			return statuses, nil
 		}
 	} else {
 		log.Debug("No stored username found: %v", err)
@@ -388,7 +336,7 @@ func getTokenScopes(token string) ([]string, error) {
 	return scopes, nil
 }
 
-// storeToken stores the token securely
+// storeToken stores the token securely in the system keyring
 func storeToken(username, token string) error {
 	// Get config directory
 	configDir := config.GetConfigDir()
@@ -399,15 +347,13 @@ func storeToken(username, token string) error {
 		return fmt.Errorf("failed to store username: %w", err)
 	}
 
-	// Try to store token in keyring
+	// Store token in keyring
 	err := keyring.Set(serviceName, username, token)
-	if err == nil {
-		return nil
+	if err != nil {
+		return fmt.Errorf("failed to store token in system keyring (please ensure system keyring is available): %w", err)
 	}
 
-	// If keyring is not available, store token in config file
-	tokenFile := filepath.Join(configDir, "token")
-	return os.WriteFile(tokenFile, []byte(token), 0o600)
+	return nil
 }
 
 // getStoredUsername gets the username from the config file
