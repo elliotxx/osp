@@ -29,6 +29,10 @@ It helps you manage issues, milestones, planning, and more.`,
 				fmt.Println(v.GetVersion())
 				return
 			}
+			// If no args or flags provided, show help
+			if len(args) == 0 && !cmd.Flags().Changed("verbose") && !cmd.Flags().Changed("no-color") {
+				cmd.Help()
+			}
 		},
 	}
 )
