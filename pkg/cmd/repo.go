@@ -3,16 +3,91 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/manifoldco/promptui"
+	"github.com/spf13/cobra"
+
 	"github.com/elliotxx/osp/pkg/config"
 	"github.com/elliotxx/osp/pkg/log"
 	"github.com/elliotxx/osp/pkg/repo"
-	"github.com/spf13/cobra"
 )
+
+// selectRepository prompts user to select a repository
+func selectRepository(repos []string, current string) (string, error) {
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "→ {{ . | cyan }}{{ if eq . \"" + current + "\" }} (current){{ end }}",
+		Inactive: "  {{ . }}{{ if eq . \"" + current + "\" }} (current){{ end }}",
+		Selected: "✓ {{ . | green }}",
+	}
+
+	prompt := promptui.Select{
+		Label:     "Select a repository",
+		Items:     repos,
+		Templates: templates,
+		Size:      10,
+	}
+
+	i, _, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return repos[i], nil
+}
 
 var repoCmd = &cobra.Command{
 	Use:   "repo",
 	Short: "Manage repositories",
-	Long:  `Manage GitHub repositories, including adding, removing, listing, and switching between them.`,
+	Long: `Manage GitHub repositories.
+
+This command allows you to manage the GitHub repositories you want to work with.
+You can add, remove, list, and switch between repositories.
+
+Examples:
+  # List all repositories
+  osp repo list
+
+  # Add a new repository
+  osp repo add owner/repo
+
+  # Remove a repository
+  osp repo remove owner/repo
+
+  # Switch to a repository
+  osp repo switch owner/repo
+
+  # Show current repository
+  osp repo current`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Load config
+		cfg, err := config.Load("")
+		if err != nil {
+			return err
+		}
+
+		repoManager := repo.NewManager(cfg)
+		repos := repoManager.List()
+		current := repoManager.Current()
+
+		if len(repos) == 0 {
+			log.Info("No repositories found.")
+			return nil
+		}
+
+		// Select repository
+		selected, err := selectRepository(repos, current)
+		if err != nil {
+			return fmt.Errorf("failed to select repository: %w", err)
+		}
+
+		// Update config if changed
+		if selected != current {
+			if err := repoManager.Switch(selected); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
 }
 
 var repoAddCmd = &cobra.Command{

@@ -184,16 +184,25 @@ func (m *Manager) Current() string {
 
 // Switch sets the current repository
 func (m *Manager) Switch(repoName string) error {
-	// Verify repository is in config
 	found := false
+
+	// Verify repository is current git repository
+	if currentGitRepo, err := getCurrentGitRepo(); err == nil {
+		if repoName == currentGitRepo {
+			found = true
+		}
+	}
+
+	// Verify repository is in config
 	for _, r := range m.cfg.Repositories {
 		if r == repoName {
 			found = true
 			break
 		}
 	}
+
 	if !found {
-		return fmt.Errorf("repository %s not found in config", repoName)
+		return fmt.Errorf("repository %s not found in config or current git repository", repoName)
 	}
 
 	// Update current
