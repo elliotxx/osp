@@ -65,7 +65,12 @@ Examples:
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		// Create repository manager
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
+
 		repos := repoManager.List()
 		current := repoManager.Current()
 
@@ -101,7 +106,12 @@ var repoAddCmd = &cobra.Command{
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		// Create repository manager
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
+
 		if err := repoManager.Add(cmd.Context(), args[0]); err != nil {
 			return err
 		}
@@ -122,7 +132,12 @@ var repoRemoveCmd = &cobra.Command{
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		// Create repository manager
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
+
 		if err := repoManager.Remove(args[0]); err != nil {
 			return err
 		}
@@ -141,7 +156,11 @@ var repoListCmd = &cobra.Command{
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
+
 		repos := repoManager.List()
 		current := repoManager.Current()
 
@@ -175,7 +194,10 @@ var repoSwitchCmd = &cobra.Command{
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
 		if err := repoManager.Switch(args[0]); err != nil {
 			return err
 		}
@@ -195,7 +217,10 @@ var repoCurrentCmd = &cobra.Command{
 			return err
 		}
 
-		repoManager := repo.NewManager(cfg)
+		repoManager, err := repo.NewManager(cfg)
+		if err != nil {
+			return err
+		}
 		current := repoManager.Current()
 
 		if current == "" {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,37 +16,35 @@ const (
 )
 
 var statsCmd = &cobra.Command{
-	Use:   "stats",
-	Short: "Repository statistics",
-	Long:  `View and analyze repository statistics.`,
-}
-
-var statsShowCmd = &cobra.Command{
-	Use:   "show [owner/repo]",
+	Use:   "stats [repository]",
 	Short: "Show repository statistics",
-	Long:  `Show basic statistics for a repository, including stars, forks, issues, etc.`,
+	Long:  "Show repository statistics such as stars, forks, and open issues",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load("")
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
-
-		// Get repository name
-		repoName := cfg.Current
+		// Get repository name from args or current
+		var repoName string
 		if len(args) > 0 {
 			repoName = args[0]
-		}
-		if repoName == "" {
-			return fmt.Errorf("no repository specified and no current repository set")
+		} else {
+			state, err := config.LoadState()
+			if err != nil {
+				return fmt.Errorf("failed to load state: %w", err)
+			}
+			repoName = state.Current
 		}
 
 		// Get format
 		format, _ := cmd.Flags().GetString("format")
 
-		statsManager := stats.NewManager(cfg)
-		stats, err := statsManager.Get(cmd.Context(), repoName)
+		// Create stats manager
+		manager, err := stats.NewManager()
 		if err != nil {
-			return fmt.Errorf("failed to get statistics: %w", err)
+			return err
+		}
+
+		// Get stats
+		stats, err := manager.Get(context.Background(), repoName)
+		if err != nil {
+			return err
 		}
 
 		// Output stats
@@ -58,11 +57,11 @@ var statsShowCmd = &cobra.Command{
 			fmt.Println(string(data))
 
 		default:
-			fmt.Printf("Statistics for %s:\n\n", repoName)
-			fmt.Printf("Stars:        %d\n", stats.Stars)
-			fmt.Printf("Forks:        %d\n", stats.Forks)
-			fmt.Printf("Open Issues:  %d\n", stats.OpenIssues)
-			fmt.Printf("Last Update:  %s\n", stats.LastUpdated)
+			fmt.Printf("Repository: %s\n", repoName)
+			fmt.Printf("Stars: %d\n", stats.Stars)
+			fmt.Printf("Forks: %d\n", stats.Forks)
+			fmt.Printf("Open Issues: %d\n", stats.OpenIssues)
+			fmt.Printf("Last Updated: %s\n", stats.LastUpdated)
 		}
 
 		return nil
@@ -80,28 +79,32 @@ var starHistoryCmd = &cobra.Command{
 	Short: "Show star history",
 	Long:  `Show the history of stars for a repository over time.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load("")
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
-
-		// Get repository name
-		repoName := cfg.Current
+		// Get repository name from args or current
+		var repoName string
 		if len(args) > 0 {
 			repoName = args[0]
-		}
-		if repoName == "" {
-			return fmt.Errorf("no repository specified and no current repository set")
+		} else {
+			state, err := config.LoadState()
+			if err != nil {
+				return fmt.Errorf("failed to load state: %w", err)
+			}
+			repoName = state.Current
 		}
 
 		// Get flags
 		days, _ := cmd.Flags().GetInt("days")
 		format, _ := cmd.Flags().GetString("format")
 
-		statsManager := stats.NewManager(cfg)
-		history, err := statsManager.GetStarHistory(cmd.Context(), repoName, days)
+		// Create stats manager
+		manager, err := stats.NewManager()
 		if err != nil {
-			return fmt.Errorf("failed to get star history: %w", err)
+			return err
+		}
+
+		// Get star history
+		history, err := manager.GetStarHistory(context.Background(), repoName, days)
+		if err != nil {
+			return err
 		}
 
 		// Output history
@@ -127,14 +130,13 @@ var starHistoryCmd = &cobra.Command{
 func init() {
 	// Add stats commands
 	rootCmd.AddCommand(statsCmd)
-	statsCmd.AddCommand(statsShowCmd)
 
 	// Add star commands
 	rootCmd.AddCommand(starCmd)
 	starCmd.AddCommand(starHistoryCmd)
 
 	// Add flags
-	statsShowCmd.Flags().String("format", "text", "Output format (text, json)")
+	statsCmd.Flags().String("format", "text", "Output format (text, json)")
 	starHistoryCmd.Flags().Int("days", 30, "Number of days to show history for")
 	starHistoryCmd.Flags().String("format", "text", "Output format (text, json)")
 }

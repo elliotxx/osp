@@ -108,7 +108,10 @@ func runPlanUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get current repository
-	repoManager := repo.NewManager(cfg)
+	repoManager, err := repo.NewManager(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create repository manager: %w", err)
+	}
 	currentRepo := repoManager.Current()
 	if currentRepo == "" {
 		return fmt.Errorf("no repository selected, please use 'osp repo current' to select one")

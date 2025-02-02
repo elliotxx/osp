@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/elliotxx/osp/pkg/config"
+	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,15 +90,8 @@ func TestGenerateContent(t *testing.T) {
 	}
 
 	// Create manager
-	cfg := &config.Config{
-		Current: "elliotxx/osp",
-		Auth: struct {
-			Token string `yaml:"token"`
-		}{
-			Token: "test-token",
-		},
-	}
-	m := NewManager(cfg, nil)
+	client, _ := api.DefaultRESTClient()
+	m, _ := NewManager(client)
 
 	// Generate content
 	content, err := m.GenerateContent(issues, "elliotxx/osp", opts)

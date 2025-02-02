@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -78,7 +77,7 @@ func Login() (string, error) {
 	}
 
 	// 5. Store token securely
-	if err := storeToken(username, accessToken.Token); err != nil {
+	if err := SaveToken(username, accessToken.Token); err != nil {
 		return "", fmt.Errorf("failed to store token: %w", err)
 	}
 
@@ -89,13 +88,8 @@ func Login() (string, error) {
 
 // Logout removes stored credentials
 func Logout() error {
-	username, err := getStoredUsername()
-	if err != nil {
-		return fmt.Errorf("failed to get stored username: %w", err)
-	}
-
-	if err := keyring.Delete(serviceName, username); err != nil {
-		return fmt.Errorf("failed to remove token from system keyring: %w", err)
+	if err := RemoveToken(); err != nil {
+		return fmt.Errorf("failed to remove token: %w", err)
 	}
 	return nil
 }
@@ -114,16 +108,9 @@ func GetToken() (string, error) {
 	}
 
 	log.Debug("No token found in environment variables, checking stored credentials...")
-	username, err := getStoredUsername()
+	token, err := getStoredToken()
 	if err != nil {
-		return "", fmt.Errorf("failed to get stored username: %w", err)
-	}
-
-	// Try to get token from keyring
-	log.Debug("Attempting to get token from keyring for user %s...", username)
-	token, err := keyring.Get(serviceName, username)
-	if err != nil {
-		return "", fmt.Errorf("failed to get token from system keyring: %w", err)
+		return "", fmt.Errorf("failed to get stored token: %w", err)
 	}
 	log.Debug("Successfully retrieved token from keyring")
 	return token, nil
@@ -131,6 +118,11 @@ func GetToken() (string, error) {
 
 // GetStatus returns the current authentication status
 func GetStatus() ([]*Status, error) {
+	// Check authentication
+	if err := CheckAuth(); err != nil {
+		return nil, err
+	}
+
 	log.Debug("Checking authentication status...")
 	statuses := make([]*Status, 0, 2)
 
@@ -184,19 +176,11 @@ func GetStatus() ([]*Status, error) {
 
 	// Then check stored token
 	log.Debug("Checking stored credentials...")
-	username, err := getStoredUsername()
+	token, err := getStoredToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stored username: %w", err)
+		return nil, fmt.Errorf("failed to get stored token: %w", err)
 	}
-	log.Debug("Found stored username: %s", username)
-
-	// Try keyring
-	log.Debug("Attempting to get token from keyring...")
-	token, err := keyring.Get(serviceName, username)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get token from system keyring: %w", err)
-	}
-	log.Debug("Successfully retrieved token from keyring")
+	log.Debug("Found stored token")
 
 	// Validate token
 	if err := validateToken(token); err != nil {
@@ -212,6 +196,11 @@ func GetStatus() ([]*Status, error) {
 			scopes = []string{"unknown"}
 		} else {
 			log.Debug("Token scopes: %v", scopes)
+		}
+
+		username, err := config.GetUsername()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get stored username: %w", err)
 		}
 
 		statuses = append(statuses, &Status{
@@ -338,41 +327,55 @@ func getTokenScopes(token string) ([]string, error) {
 	return scopes, nil
 }
 
-// storeToken stores the token securely in the system keyring
-func storeToken(username, token string) error {
-	// Get config directory
-	configDir := config.GetConfigDir()
-
-	// Store username
-	usernameFile := filepath.Join(configDir, "username")
-	if err := os.WriteFile(usernameFile, []byte(username), 0o600); err != nil {
-		return fmt.Errorf("failed to store username: %w", err)
+// getStoredToken gets the stored token from the keyring
+func getStoredToken() (string, error) {
+	username, err := config.GetUsername()
+	if err != nil {
+		return "", fmt.Errorf("failed to get username: %w", err)
 	}
 
-	// Store token in keyring
-	err := keyring.Set(serviceName, username, token)
+	token, err := keyring.Get(serviceName, username)
 	if err != nil {
-		return fmt.Errorf("failed to store token in system keyring (please ensure system keyring is available): %w", err)
+		return "", fmt.Errorf("failed to get token from system keyring: %w", err)
+	}
+
+	return token, nil
+}
+
+// SaveToken saves the token to keyring
+func SaveToken(username, token string) error {
+	// Save username to state
+	if err := config.SaveUsername(username); err != nil {
+		return fmt.Errorf("failed to save username: %w", err)
+	}
+
+	// Save token to keyring
+	if err := keyring.Set(serviceName, username, token); err != nil {
+		return fmt.Errorf("failed to save token to keyring: %w", err)
 	}
 
 	return nil
 }
 
-// getStoredUsername gets the username from the config file
-func getStoredUsername() (string, error) {
-	usernameFile := filepath.Join(config.GetConfigDir(), "username")
-	data, err := os.ReadFile(usernameFile)
+// RemoveToken removes the token from keyring
+func RemoveToken() error {
+	username, err := config.GetUsername()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("username file not found")
-		}
-		return "", err
+		//nolint:nilerr
+		return nil // If no username found, nothing to remove
 	}
-	username := strings.TrimSpace(string(data))
-	if username == "" {
-		return "", fmt.Errorf("stored username is empty")
+
+	// Remove token from keyring
+	if err := keyring.Delete(serviceName, username); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove token from keyring: %w", err)
 	}
-	return username, nil
+
+	// Remove username from state
+	if err := config.RemoveUsername(); err != nil {
+		return fmt.Errorf("failed to remove username: %w", err)
+	}
+
+	return nil
 }
 
 // openBrowser opens the specified URL in the default browser

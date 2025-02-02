@@ -21,10 +21,23 @@ import (
 //go:embed templates/*.gotmpl
 var templatesFS embed.FS
 
-// Manager handles onboarding issue management
+// Manager manages onboarding process
 type Manager struct {
-	cfg    *config.Config
+	state  *config.State
 	client *api.RESTClient
+}
+
+// NewManager creates a new onboarding manager
+func NewManager(client *api.RESTClient) (*Manager, error) {
+	state, err := config.LoadState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load state: %w", err)
+	}
+
+	return &Manager{
+		state:  state,
+		client: client,
+	}, nil
 }
 
 // OnboardIssue represents an issue suitable for new contributors
@@ -87,14 +100,6 @@ type TemplateData struct {
 	CategoryLabels   []string                             `json:"category_labels"`
 	Stats            Stats                                `json:"stats"`
 	OnboardLabels    []string                             `json:"onboard_labels"`
-}
-
-// NewManager creates a new onboard manager
-func NewManager(cfg *config.Config, client *api.RESTClient) *Manager {
-	return &Manager{
-		cfg:    cfg,
-		client: client,
-	}
 }
 
 // SearchOnboardIssues generates onboarding issues for new contributors

@@ -62,7 +62,10 @@ func runOnboardUpdate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Get repository name
-	repoManager := repo.NewManager(cfg)
+	repoManager, err := repo.NewManager(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create repository manager: %w", err)
+	}
 	repoName := repoManager.Current()
 	if repoName == "" {
 		return fmt.Errorf("no repository selected, use 'osp repo switch' to select a repository first")
@@ -125,7 +128,10 @@ func runOnboardUpdate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Create onboard manager
-	onboardManager := onboard.NewManager(cfg, client)
+	onboardManager, err := onboard.NewManager(client)
+	if err != nil {
+		return fmt.Errorf("failed to create onboarding manager: %w", err)
+	}
 
 	// Update onboarding issue
 	err = onboardManager.Update(cmd.Context(), repoName, opts)

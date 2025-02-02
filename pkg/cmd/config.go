@@ -74,7 +74,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 
 	// Get OSP paths
 	configDir := config.GetConfigDir()
-	configFile := filepath.Join(configDir, "config.yaml")
+	configFile := config.GetConfigFile()
 	stateDir := config.GetStateDir()
 
 	// Print XDG environment variables
@@ -112,7 +112,8 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 }
 
 func runConfigEdit(cmd *cobra.Command, args []string) error {
-	configFile := filepath.Join(config.GetConfigDir(), "config.yml")
+	// Get config file path
+	configFile := config.GetConfigFile()
 
 	// Get editor from environment or use default
 	editor := os.Getenv("EDITOR")
@@ -144,21 +145,26 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 }
 
 func runConfigClean(cmd *cobra.Command, args []string) error {
-	// List of directories to clean
-	dirs := []struct {
-		path string
-		name string
-	}{
-		{config.GetConfigDir(), "configuration"},
-		{config.GetStateDir(), "state data"},
-	}
+	// Get config directory
+	configDir := config.GetConfigDir()
+	configFile := config.GetConfigFile()
+
+	// Get data directory
+	stateDir := config.GetStateDir()
+
+	// Print locations
+	log.Info("The following files and directories will be removed:")
+	log.L(1).Info("Config directory: %s", configDir)
+	log.L(2).Info("Config file: %s", configFile)
+	log.L(1).Info("State directory: %s", stateDir)
 
 	// Check which directories exist
 	var existingDirs []string
-	for _, dir := range dirs {
-		if _, err := os.Stat(dir.path); err == nil {
-			existingDirs = append(existingDirs, dir.path)
-		}
+	if _, err := os.Stat(configDir); err == nil {
+		existingDirs = append(existingDirs, configDir)
+	}
+	if _, err := os.Stat(stateDir); err == nil {
+		existingDirs = append(existingDirs, stateDir)
 	}
 
 	// Skip if nothing to clean
@@ -169,11 +175,6 @@ func runConfigClean(cmd *cobra.Command, args []string) error {
 
 	// Show plan and get confirmation
 	if !cleanFlags.force {
-		log.Info("The following directories will be removed:")
-		for _, dir := range existingDirs {
-			log.L(1).Info(dir)
-		}
-
 		confirmed, err := prompt.AskForConfirmation("Do you want to continue?")
 		if err != nil {
 			return err
@@ -185,14 +186,12 @@ func runConfigClean(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute plan
-	for _, dir := range dirs {
-		if _, err := os.Stat(dir.path); err == nil {
-			log.Debug("Removing %s: %s", dir.name, dir.path)
-			if err := os.RemoveAll(dir.path); err != nil {
-				return fmt.Errorf("failed to remove %s: %w", dir.name, err)
-			}
-			log.Info("Removed %s", dir.name)
+	for _, dir := range existingDirs {
+		log.Debug("Removing directory: %s", dir)
+		if err := os.RemoveAll(dir); err != nil {
+			return fmt.Errorf("failed to remove directory: %w", err)
 		}
+		log.Info("Removed directory: %s", dir)
 	}
 
 	log.Info("All configuration files and data have been removed")
@@ -201,5 +200,5 @@ func runConfigClean(cmd *cobra.Command, args []string) error {
 
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
-	return err == nil
+	return err == nil || !os.IsNotExist(err)
 }

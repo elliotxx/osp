@@ -8,13 +8,27 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/config"
 )
 
 // Manager handles repository operations
 type Manager struct {
-	cfg    *config.Config
+	state  *config.State
 	client *http.Client
+}
+
+// NewManager creates a new repository manager
+func NewManager(cfg *config.Config) (*Manager, error) {
+	state, err := config.LoadState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load state: %w", err)
+	}
+
+	return &Manager{
+		state:  state,
+		client: http.DefaultClient,
+	}, nil
 }
 
 // Repository represents a GitHub repository
@@ -30,14 +44,6 @@ type Repository struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
-// NewManager creates a new repository manager
-func NewManager(cfg *config.Config) *Manager {
-	return &Manager{
-		cfg:    cfg,
-		client: http.DefaultClient,
-	}
-}
-
 // Add adds a repository to the config
 func (m *Manager) Add(ctx context.Context, repoName string) error {
 	// Verify repository exists
@@ -47,12 +53,12 @@ func (m *Manager) Add(ctx context.Context, repoName string) error {
 	}
 
 	// Add to config
-	m.cfg.Repositories = append(m.cfg.Repositories, repo.FullName)
+	m.state.Repositories = append(m.state.Repositories, repo.FullName)
 
 	// Automatically select the newly added repository
-	m.cfg.Current = repo.FullName
+	m.state.Current = repo.FullName
 
-	if err := m.cfg.Save(); err != nil {
+	if err := config.SaveState(m.state); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -68,13 +74,13 @@ func (m *Manager) Remove(repoName string) error {
 
 	// Find and remove repository
 	found := false
-	newRepos := make([]string, 0, len(m.cfg.Repositories))
-	for _, repo := range m.cfg.Repositories {
+	newRepos := make([]string, 0, len(m.state.Repositories))
+	for _, repo := range m.state.Repositories {
 		if repo == repoName {
 			found = true
 			// If removing current repository, we'll need to select a new one
-			if repo == m.cfg.Current {
-				m.cfg.Current = ""
+			if repo == m.state.Current {
+				m.state.Current = ""
 			}
 			continue
 		}
@@ -85,20 +91,20 @@ func (m *Manager) Remove(repoName string) error {
 		return fmt.Errorf("repository %s not found", repoName)
 	}
 
-	m.cfg.Repositories = newRepos
+	m.state.Repositories = newRepos
 
 	// If we removed the current repository, select a new one
-	if m.cfg.Current == "" {
+	if m.state.Current == "" {
 		// Try to select current git repository first
 		if currentGitRepo, err := getCurrentGitRepo(); err == nil {
-			m.cfg.Current = currentGitRepo
+			m.state.Current = currentGitRepo
 		} else if len(newRepos) > 0 {
 			// Otherwise select the first repository in the list
-			m.cfg.Current = newRepos[0]
+			m.state.Current = newRepos[0]
 		}
 	}
 
-	if err := m.cfg.Save(); err != nil {
+	if err := config.SaveState(m.state); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -145,13 +151,13 @@ func getCurrentGitRepo() (string, error) {
 
 // List returns all repositories in the config and the current git repository
 func (m *Manager) List() []string {
-	repos := make([]string, 0, len(m.cfg.Repositories)+1)
+	repos := make([]string, 0, len(m.state.Repositories)+1)
 
 	// Get current git repository
 	if currentRepo, err := getCurrentGitRepo(); err == nil {
 		// Add current repo if it's not already in the list
 		found := false
-		for _, repo := range m.cfg.Repositories {
+		for _, repo := range m.state.Repositories {
 			if repo == currentRepo {
 				found = true
 				break
@@ -163,15 +169,15 @@ func (m *Manager) List() []string {
 	}
 
 	// Add repositories from config
-	repos = append(repos, m.cfg.Repositories...)
+	repos = append(repos, m.state.Repositories...)
 
 	return repos
 }
 
 // Current returns the current repository or the current git repository if none is set
 func (m *Manager) Current() string {
-	if m.cfg.Current != "" {
-		return m.cfg.Current
+	if m.state.Current != "" {
+		return m.state.Current
 	}
 
 	// Try to get current git repository
@@ -194,7 +200,7 @@ func (m *Manager) Switch(repoName string) error {
 	}
 
 	// Verify repository is in config
-	for _, r := range m.cfg.Repositories {
+	for _, r := range m.state.Repositories {
 		if r == repoName {
 			found = true
 			break
@@ -206,8 +212,8 @@ func (m *Manager) Switch(repoName string) error {
 	}
 
 	// Update current
-	m.cfg.Current = repoName
-	if err := m.cfg.Save(); err != nil {
+	m.state.Current = repoName
+	if err := config.SaveState(m.state); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
@@ -230,7 +236,8 @@ func (m *Manager) getRepository(ctx context.Context, repoName string) (*Reposito
 	}
 
 	// Add auth header if token exists
-	if token := m.cfg.Auth.Token; token != "" {
+	token, err := auth.GetToken()
+	if err == nil && token != "" {
 		req.Header.Set("Authorization", "token "+token)
 	}
 

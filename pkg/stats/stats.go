@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elliotxx/osp/pkg/auth"
 	"github.com/elliotxx/osp/pkg/config"
 )
 
-// Manager handles repository statistics
+// Manager manages repository statistics
 type Manager struct {
-	cfg    *config.Config
+	state  *config.State
 	client *http.Client
 }
 
@@ -31,11 +32,16 @@ type StarHistory struct {
 }
 
 // NewManager creates a new stats manager
-func NewManager(cfg *config.Config) *Manager {
-	return &Manager{
-		cfg:    cfg,
-		client: http.DefaultClient,
+func NewManager() (*Manager, error) {
+	state, err := config.LoadState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load state: %w", err)
 	}
+
+	return &Manager{
+		state:  state,
+		client: &http.Client{},
+	}, nil
 }
 
 // Get returns repository statistics
@@ -46,8 +52,9 @@ func (m *Manager) Get(ctx context.Context, repoName string) (*Stats, error) {
 		return nil, err
 	}
 
-	if m.cfg.Auth.Token != "" {
-		req.Header.Set("Authorization", "token "+m.cfg.Auth.Token)
+	token, err := auth.GetToken()
+	if err == nil && token != "" {
+		req.Header.Set("Authorization", "token "+token)
 	}
 
 	resp, err := m.client.Do(req)
