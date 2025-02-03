@@ -157,17 +157,7 @@ jobs:
 
 ## 👥 谁在使用它
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/KusionStack/karpor">
-        <img src="https://avatars.githubusercontent.com/u/104968284?s=48&v=4" width="100px;" alt="karpor"/>
-        <br />
-        <b>karpor</b>
-      </a>
-    </td>
-  </tr>
-</table>
+- [karpor](https://github.com/KusionStack/karpor)
 
 ## 🤝 贡献
 
