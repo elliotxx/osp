@@ -155,6 +155,20 @@ jobs:
 - [设计文档](docs/design/README.md) - 架构设计与实现
 - [CLI 手册](docs/cli/osp.md) - 命令行工具参考
 
+## 👥 谁在使用它
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/KusionStack/karpor">
+        <img src="https://avatars.githubusercontent.com/u/104968284?s=48&v=4" width="100px;" alt="karpor"/>
+        <br />
+        <b>karpor</b>
+      </a>
+    </td>
+  </tr>
+</table>
+
 ## 🤝 贡献
 
 我们欢迎各种形式的贡献！无论是新功能、文档改进还是 bug 修复。详情请参考[贡献指南](CONTRIBUTING.md)。
