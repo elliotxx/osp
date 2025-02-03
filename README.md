@@ -37,7 +37,6 @@ go install github.com/elliotxx/osp@latest
 
 ### 🍺 Homebrew 安装
 
-通过 Homebrew 安装：
 ```bash
 brew tap elliotxx/tap
 brew install osp

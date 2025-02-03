@@ -124,7 +124,7 @@ func GetStatus() ([]*Status, error) {
 	}
 
 	log.Debug("Checking authentication status...")
-	statuses := make([]*Status, 0, 2)
+	statuses := make([]*Status, 0, 3)
 
 	// Check environment variables first
 	log.Debug("Checking environment variables...")
@@ -178,7 +178,8 @@ func GetStatus() ([]*Status, error) {
 	log.Debug("Checking stored credentials...")
 	token, err := getStoredToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stored token: %w", err)
+		log.Warn("Failed to get stored token: %v", err)
+		return statuses, nil
 	}
 	log.Debug("Found stored token")
 
