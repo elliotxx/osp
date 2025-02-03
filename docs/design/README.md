@@ -5,9 +5,8 @@
 1. [整体架构](architecture.md)
 2. [命令行设计](cli-design.md)
 3. [配置管理](configuration.md)
-4. [数据存储](storage.md)
-5. [认证机制](authentication.md)
-6. [自动化功能](automation.md)
+4. [认证机制](authentication.md)
+5. [日志框架](log.md)
 
 ## 核心概念
 

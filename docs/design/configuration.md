@@ -1,115 +1,162 @@
 # OSP 配置管理设计
 
-## 配置文件
+## 目录结构
 
-### 位置
+OSP遵循XDG Base Directory Specification：
 
-OSP 的配置文件存储在以下位置：
+- 配置：`$XDG_CONFIG_HOME/osp`（默认：`~/.config/osp`）
+- 状态：`$XDG_STATE_HOME/osp`（默认：`~/.local/state/osp`）
+- 数据：`$XDG_DATA_HOME/osp`（默认：`~/.local/share/osp`）
+- 缓存：`$XDG_CACHE_HOME/osp`（默认：`~/.cache/osp`）
 
-- macOS: `~/Library/Application Support/osp/config.yml`
-- Linux: `~/.config/osp/config.yml`
-- Windows: `%AppData%\osp\config.yml`
+各平台的默认路径参考：
 
-### 结构
+### Linux
+- 配置：`~/.config/osp/`
+- 状态：`~/.local/state/osp/`
+- 数据：`~/.local/share/osp/`
+- 缓存：`~/.cache/osp/`
 
-配置文件使用 YAML 格式，主要包含以下部分：
+### macOS
+- 配置：`~/Library/Application Support/osp/`
+- 状态：`~/Library/Application Support/osp/`
+- 数据：`~/Library/Application Support/osp/`
+- 缓存：`~/Library/Caches/osp/`
+
+### Windows
+- 配置：`%AppData%\osp\`
+- 状态：`%AppData%\osp\`
+- 数据：`%AppData%\osp\`
+- 缓存：`%LocalAppData%\osp\cache\`
+
+## 文件结构
+
+### 配置文件
+
+配置文件（`config.yaml`）存储应用程序配置：
 
 ```yaml
-# 认证配置
-auth:
-  token: ""  # GitHub 令牌，由 GitHub CLI 提供
+# 暂时为空，保留用于未来使用
+```
 
-# 当前仓库
-current: ""  # 当前选中的仓库
+### 状态文件
 
-# 仓库列表
-repositories:  # 管理的仓库列表
+状态文件（`state.yaml`）存储运行时状态：
+
+```yaml
+# GitHub用户名用于认证
+username: ""
+
+# 当前选中的仓库
+current: ""
+
+# 管理的仓库列表
+repositories:
   - owner/repo1
   - owner/repo2
 ```
 
-## 配置管理
-
-### 配置加载
-
-1. 配置初始化
-   - 检查配置目录是否存在
-   - 创建默认配置文件
-
-2. 配置读取
-   - 读取 YAML 文件
-   - 解析配置项
-
-3. 配置验证
-   - 验证必要字段
-   - 检查字段格式
-
-### 配置更新
-
-1. 仓库管理
-   - 添加/移除仓库
-   - 更新当前仓库
-
-2. 配置保存
-   - 序列化为 YAML
-   - 写入文件
-
 ## 实现细节
 
-### 配置结构体
+### 核心类型
 
 ```go
-// Config represents the application configuration
+// Config代表应用程序配置
 type Config struct {
-    Auth struct {
-        Token string `yaml:"token"`
-    } `yaml:"auth"`
-    Current      string   `yaml:"current"`
-    Repositories []string `yaml:"repositories"`
+    // 暂时为空，保留用于未来使用
+}
+
+// State代表应用程序状态
+type State struct {
+    // 用于认证的用户名
+    Username string `yaml:"username,omitempty"`
+
+    // 当前仓库
+    Current string `yaml:"current,omitempty"`
+
+    // 仓库列表
+    Repositories []string `yaml:"repositories,omitempty"`
 }
 ```
 
-### 配置操作
+### 关键函数
 
-1. 加载配置
+1. 目录管理
 ```go
-func Load(path string) (*Config, error)
+// 获取XDG目录路径
+GetConfigHome() string
+GetStateHome() string
+GetDataHome() string
+GetCacheHome() string
+
+// 获取OSP特定目录
+GetConfigDir() string  // 返回$XDG_CONFIG_HOME/osp
+GetStateDir() string   // 返回$XDG_STATE_HOME/osp
 ```
 
-2. 保存配置
+2. 文件操作
 ```go
-func (c *Config) Save() error
+// 获取文件路径
+GetConfigFile() string // 返回config.yaml路径
+GetStateFile() string  // 返回state.yaml路径
+
+// 加载和保存配置
+Load(path string) (*Config, error)
+Save() error
+
+// 加载和保存状态
+LoadState() (*State, error)
+SaveState(state *State) error
 ```
 
-### 错误处理
+3. 状态管理
+```go
+// 用户名操作
+GetUsername() (string, error)
+SaveUsername(username string) error
+RemoveUsername() error
 
-1. 文件操作错误
-   - 文件不存在
-   - 权限不足
-   - IO 错误
+// 仓库操作
+GetCurrentRepo() (string, error)
+SaveCurrentRepo(current string) error
+GetRepositories() ([]string, error)
+SaveRepositories(repos []string) error
+```
 
-2. 解析错误
-   - YAML 格式错误
-   - 字段类型错误
+### 安全特性
 
-3. 验证错误
-   - 必要字段缺失
-   - 字段格式错误
+1. 文件权限
+   - 目录：0700（用户读写执行权限）
+   - 文件：0600（用户读写权限）
+
+2. 错误处理
+   - 缺失文件的优雅处理
+   - 自动目录创建
+   - 清晰的错误消息
+
+3. 调试日志
+   - 文件操作的详细调试日志
+   - 路径解析日志
+   - 错误上下文日志
 
 ## 最佳实践
 
-1. 配置验证
-   - 在加载时验证配置
-   - 在修改时验证更改
+1. XDG兼容性
+   - 遵循XDG Base Directory Specification
+   - 使用标准目录结构
+   - 支持平台特定路径
 
-2. 错误恢复
-   - 保持配置文件备份
-   - 支持重置为默认值
+2. 状态管理
+   - 将配置与运行时状态分离
+   - 原子状态更新
+   - 缺失状态的优雅处理
 
 3. 安全性
-   - 敏感信息使用系统 keyring
-   - 配置文件权限控制
+   - 严格的文件权限
+   - 用户只读访问
+   - 不存储敏感数据
 
-4. 兼容性
-   - 支持配置版本升级
-   - 保持向后兼容
+4. 错误处理
+   - 描述性的错误消息
+   - 优雅的回退
+   - 调试日志支持
