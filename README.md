@@ -12,6 +12,10 @@ OSP (Open Source Pilot) is an automated tool focused on open source community go
 
 OSP offers two usage modes: a CLI tool and GitHub Action workflows. The CLI tool is suitable for local interactive management, while GitHub Action enables fully automated operations through github event subscriptions - configure once, serve continuously.
 
+Actual Example:
+- [Automated updated community task list](https://github.com/KusionStack/karpor/issues/463)
+- [Automated updated project planning](https://github.com/KusionStack/karpor/issues/723)
+
 ## ✨ Features
 
 ### Implemented

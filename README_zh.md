@@ -12,6 +12,10 @@ OSP (Open Source Pilot) 是一款专注于开源社区治理的自动化管理�
 
 OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工作流。CLI 工具适合本地交互式管理，而 GitHub Action 则可以通过订阅事件实现全自动化运维，一次配置，持续服务。
 
+实际示例：
+- [自动更新的社区任务列表](https://github.com/KusionStack/karpor/issues/463)
+- [自动更新的项目规划](https://github.com/KusionStack/karpor/issues/723)
+
 ## ✨ 特性
 
 ### 已实现功能

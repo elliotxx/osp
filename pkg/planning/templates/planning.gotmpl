@@ -24,7 +24,8 @@
 {{ end }}{{ end }}{{ if .Stats.Contributors }}
 ## Contributors
 Thanks to all our contributors for their efforts on completed issues:
-{{ range $contributor := .Stats.Contributors }}- @{{ $contributor }}{{ end }}{{ end }}
+{{ range $contributor := .Stats.Contributors }}- @{{ $contributor }}
+{{ end }}{{ end }}
 
 ## Links
 - 📋 [Issues without priority](https://github.com/{{ .RepoOwner }}/{{ .RepoName }}/issues?q=is%3Aopen+is%3Aissue+milestone%3A{{ .Milestone.Title }}{{ range .Priorities }}+-label%3A{{ . }}{{ end }})
