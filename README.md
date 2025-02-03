@@ -6,90 +6,93 @@
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
 [![License](https://img.shields.io/github/license/elliotxx/osp.svg)](https://github.com/elliotxx/osp/blob/main/LICENSE)
 
-OSP (Open Source Software Pilot) 是一款专注于开源社区运营的自动化管理工具。它融合了多种开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
+[English](README.md) | [简体中文](README_zh.md)
 
-OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工作流。CLI 工具适合本地交互式管理，而 GitHub Action 则可以通过订阅事件实现全自动化运维，一次配置，持续服务。
+OSP (Open Source Software Pilot) is an automated tool focused on open source community governance. It integrates various best practices in open source community governance, providing maintainers with a comprehensive toolkit for efficient operations, precise tracking, and data-driven decision making.
 
-## ✨ 特性
+OSP offers two usage modes: a CLI tool and GitHub Action workflows. The CLI tool is suitable for local interactive management, while GitHub Action enables fully automated operations through github event subscriptions - configure once, serve continuously.
 
-### 已实现功能
-- 🔑 GitHub 认证管理 - 安全可靠的身份认证，GITHUB CLI 同款
-- 📊 项目数据统计 - 多维度的数据分析
-- 📝 新手任务、项目规划生成 - 支持通过订阅 Github 事件自动化更新
-- 📈 Star 趋势统计 - 项目增长数据追踪
+## ✨ Features
 
-### 开发路线
-- 📋 Roadmap 划生成 - 支持通过订阅 Github 事件自动化更新
-- 📅 社区动态聚合 - 自动聚合近期评论、新建 PR/Issue/Discussion，支持通过 webhook 订阅长期未响应的社区动态
-- 🤖 智能 PR Review - 基于 LLM 的代码审查，支持自动化评论
-- 💡 智能 Issue 创建 - 一句话生成 Issue，提升创建任务/需求的效率
-- 🔌 GitHub App 集成 - 更强大的集成能力
+### Implemented
+- 🔑 GitHub Authentication - Secure identity authentication, same as GitHub CLI
+- 📊 Project Statistics - Multi-dimensional data analysis
+- 📝 Community Tasks & Project Planning - Auto-updates through GitHub event subscriptions
+- 📈 Star History - Project growth tracking
 
-## 🚀 安装
+### Roadmap
+- 📋 Roadmap Generation - Auto-updates through GitHub event subscriptions
+- 📅 Community Activity Aggregation - Auto-aggregates recent comments, new PRs/Issues/Discussions
+- 🤖 Smart PR Review - LLM-based code review with automated comments
+- 💡 Smart Issue Creation - One-line issue generation for improved efficiency
+- 🔌 GitHub App Integration - Enhanced integration capabilities
 
-更多安装方式请参考 [高级安装指南](docs/guide/advanced-installation.md)。
+## 🚀 Installation
 
-### 🐙 Go 安装
+For more installation options, see [Advanced Installation Guide](docs/guide/advanced-installation.md).
+
+### 🐙 Via Go
 
 ```bash
 go install github.com/elliotxx/osp@latest
 ```
 
-### 🍺 Homebrew 安装
+### 🍺 Via Homebrew
 
 ```bash
 brew tap elliotxx/tap
 brew install osp
 ```
-## 🚀 使用方法
 
-### 🖥️ CLI 命令行
+## 🚀 Usage
 
-1. 配置 GitHub 认证
+### 🖥️ CLI Tool
+
+1. Configure GitHub Authentication
 ```bash
-# 使用 GitHub CLI 登录
+# Login with GitHub CLI
 gh auth login
 
-# 验证认证状态
+# Verify authentication status
 osp auth status
 ```
 
-2. 项目管理
+2. Project Management
 ```bash
-# 添加项目
+# Add a project
 osp repo add owner/repo
 
-# 切换项目
+# Switch projects
 osp repo
 
-# 查看当前项目
+# View current project
 osp repo current
 ```
 
-3. 核心功能
+3. Core Features
 ```bash
-# 生成版本规划
+# Generate version planning
 osp plan
 
-# 管理新手任务
+# Manage community tasks
 osp onboard
 
-# 查看项目统计
+# View project statistics
 osp stats
 
-# 分析 Star 趋势
-osp stats star-history
+# Analyze Star history
+osp star history
 ```
 
-更多详细说明请参考 [CLI 使用指南](docs/guide/cli.md)。
+For more details, see the [CLI Usage Guide](docs/guide/cli.md).
 
 ### 🤖 GitHub Action
 
-> osp-action 实现请查看 [osp-action](https://github.com/elliotxx/osp-action)
+> For osp-action implementation, see [osp-action](https://github.com/elliotxx/osp-action)
 
-下面以通过 osp-action 实现**社区新手任务自动化生成和更新**为例，更多 osp-action 的自动化使用场景请查看 [文档](docs/guide/github-action.md)。
+Here's an example of automating community task generation and updates using osp-action. For more automation scenarios, see the [documentation](docs/guide/github-action.md).
 
-1. 在主分支（main/master）创建工作流配置文件 `.github/workflows/community-task-updater.yml`：
+1. Create workflow file `.github/workflows/community-task-updater.yml` in main branch:
 ```yaml
 name: Community Task Updater
 
@@ -130,31 +133,31 @@ jobs:
             --onboard-labels 'help wanted,good first issue'
             --difficulty-labels 'good first issue,help wanted'
             --category-labels bug,documentation,enhancement
-            --target-title 'Community tasks | 新手任务清单 🎖︎'
+            --target-title 'Community Tasks 🎯'
 ```
 
-2. 配置必要权限
-- 导航至 Settings -> Actions -> General
-- 在 "Workflow permissions" 中启用 "Read and write permissions"
-- 保存配置更改
+2. Configure Required Permissions
+- Navigate to Settings -> Actions -> General
+- Enable "Read and write permissions" under "Workflow permissions"
+- Save the changes
 
-3. 使用方式
-- 自动执行：设定的 Github 事件触发时工作流会自动执行
-- 手动触发：
-  1. 进入 Actions 页面
-  2. 选择 "Community Task Updater"
-  3. 点击 "Run workflow"
+3. Usage
+- Automatic: Workflow executes automatically when configured GitHub events occur
+- Manual:
+  1. Go to Actions page
+  2. Select "Community Task Updater"
+  3. Click "Run workflow"
 
-## 📚 文档
+## 📚 Documentation
 
-- [使用指南](docs/guide/README.md) - 详细的使用说明
-- [设计文档](docs/design/README.md) - 架构设计与实现
-- [CLI 手册](docs/cli/osp.md) - 命令行工具参考
+- [User Guide](docs/guide/README.md) - Detailed usage instructions
+- [Design Docs](docs/design/README.md) - Architecture and implementation
+- [CLI Reference](docs/cli/osp.md) - Command-line tool reference
 
-## 🤝 贡献
+## 🤝 Contributing
 
-我们欢迎各种形式的贡献！无论是新功能、文档改进还是 bug 修复。详情请参考[贡献指南](CONTRIBUTING.md)。
+We welcome all forms of contributions! Whether it's new features, documentation improvements, or bug fixes. See our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📄 许可证
+## 📄 License
 
-本项目采用 MIT 许可证，查看 [LICENSE](LICENSE) 了解详情。
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
