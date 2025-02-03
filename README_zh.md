@@ -1,6 +1,6 @@
 ![OSP](https://socialify.git.ci/elliotxx/osp/image?font=Raleway&language=1&name=1&owner=1&pattern=Plus&theme=Light)
 
-# OSP - Open Source Software Pilot
+# OSP - Open Source Pilot for Community Governance
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/elliotxx/osp)](https://goreportcard.com/report/github.com/elliotxx/osp)
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
@@ -8,7 +8,7 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-OSP (Open Source Software Pilot) 是一款专注于开源社区治理的自动化管理工具。它融合了多种开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
+OSP (Open Source Pilot) 是一款专注于开源社区治理的自动化管理工具。它融合了多种开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
 
 OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工作流。CLI 工具适合本地交互式管理，而 GitHub Action 则可以通过订阅事件实现全自动化运维，一次配置，持续服务。
 
@@ -26,6 +26,7 @@ OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工
 - 🤖 智能 PR Review - 基于 LLM 的代码审查，支持自动化评论
 - 💡 智能 Issue 创建 - 一句话生成 Issue，提升创建任务/需求的效率
 - 🔌 GitHub App 集成 - 更强大的集成能力
+- 📝 Release Note 生成 - 自动总结核心变更、贡献者和社区参与者数量等统计信息
 
 ## 🚀 安装
 

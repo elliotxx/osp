@@ -1,6 +1,6 @@
 ![OSP](https://socialify.git.ci/elliotxx/osp/image?font=Raleway&language=1&name=1&owner=1&pattern=Plus&theme=Light)
 
-# OSP - Open Source Software Pilot
+# OSP - Open Source Pilot for Community Governance
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/elliotxx/osp)](https://goreportcard.com/report/github.com/elliotxx/osp)
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
@@ -8,7 +8,7 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-OSP (Open Source Software Pilot) is an automated tool focused on open source community governance. It integrates various best practices in open source community governance, providing maintainers with a comprehensive toolkit for efficient operations, precise tracking, and data-driven decision making.
+OSP (Open Source Pilot) is an automated tool focused on open source community governance. It integrates various best practices in open source community governance, providing maintainers with a comprehensive toolkit for efficient operations, precise tracking, and data-driven decision making.
 
 OSP offers two usage modes: a CLI tool and GitHub Action workflows. The CLI tool is suitable for local interactive management, while GitHub Action enables fully automated operations through github event subscriptions - configure once, serve continuously.
 
@@ -26,6 +26,7 @@ OSP offers two usage modes: a CLI tool and GitHub Action workflows. The CLI tool
 - 🤖 Smart PR Review - LLM-based code review with automated comments
 - 💡 Smart Issue Creation - One-line issue generation for improved efficiency
 - 🔌 GitHub App Integration - Enhanced integration capabilities
+- 📝 Release Note Generation - Auto-summarizes core changes, contributors, and community participation metrics
 
 ## 🚀 Installation
 
