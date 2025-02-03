@@ -6,7 +6,7 @@
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
 [![License](https://img.shields.io/github/license/elliotxx/osp.svg)](https://github.com/elliotxx/osp/blob/main/LICENSE)
 
-OSP (Open Source Software Pilot) 是一款专注于开源社区运营的自动化管理工具。它融合了多年开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
+OSP (Open Source Software Pilot) 是一款专注于开源社区运营的自动化管理工具。它融合了多种开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
 
 OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工作流。CLI 工具适合本地交互式管理，而 GitHub Action 则可以通过订阅事件实现全自动化运维，一次配置，持续服务。
 
