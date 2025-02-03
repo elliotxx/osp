@@ -1,25 +1,29 @@
+![OSP](https://socialify.git.ci/elliotxx/osp/image?font=Raleway&language=1&name=1&owner=1&pattern=Plus&theme=Light)
+
 # OSP - Open Source Software Pilot
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/elliotxx/osp)](https://goreportcard.com/report/github.com/elliotxx/osp)
 [![GoDoc](https://godoc.org/github.com/elliotxx/osp?status.svg)](https://godoc.org/github.com/elliotxx/osp)
 [![License](https://img.shields.io/github/license/elliotxx/osp.svg)](https://github.com/elliotxx/osp/blob/main/LICENSE)
 
-OSP (Open Source Software Pilot) 是一个自动化的开源软件社区管理工具，内置多种开源社区管理的最佳实践，帮助开源项目维护者更高效地管理项目、跟踪进展、生成报告。
+OSP (Open Source Software Pilot) 是一款专注于开源社区运营的自动化管理工具。它融合了多年开源社区治理的最佳实践，为开源项目维护者提供了一套完整的工具链，助力项目高效运营、精准跟踪、数据驱动决策。
 
-OSP 有两种形态： CLI 和 Github Action。CLI 适应于本地主动维护管理，而 Action 可以通过订阅 Github 事件实现自动化管理，一键配置，自动维护。
+OSP 提供两种使用方式：CLI 命令行工具和 GitHub Action 自动化工作流。CLI 工具适合本地交互式管理，而 GitHub Action 则可以通过订阅事件实现全自动化运维，一次配置，持续服务。
 
-## 特性
+## ✨ 特性
 
-- [x] 🔑 GitHub 认证管理
-- [x] 📊 项目数据统计和分析
-- [x] 📝 自动生成项目规划，支持动态更新
-- [x] 📝 自动生成新手任务，支持动态更新
-- [x] 📈 Star 趋势统计
-- [ ] 📝 自动生成 Roadmap，支持动态更新
-- [ ] 📅 聚合社区近期动态
-- [ ] 📝 基于 LLM 的 PR Review，支持自动化评论
-- [ ] 📝 基于 LLM 的一句话创建 Issue
-- [ ] 🤖 Github App 集成
+### 已实现功能
+- 🔑 GitHub 认证管理 - 安全可靠的身份认证，GITHUB CLI 同款
+- 📊 项目数据统计 - 多维度的数据分析
+- 📝 新手任务、项目规划生成 - 支持通过订阅 Github 事件自动化更新
+- 📈 Star 趋势统计 - 项目增长数据追踪
+
+### 开发路线
+- 📋 Roadmap 划生成 - 支持通过订阅 Github 事件自动化更新
+- 📅 社区动态聚合 - 自动聚合近期评论、新建 PR/Issue/Discussion，支持通过 webhook 订阅长期未响应的社区动态
+- 🤖 智能 PR Review - 基于 LLM 的代码审查，支持自动化评论
+- 💡 智能 Issue 创建 - 一句话生成 Issue，提升创建任务/需求的效率
+- 🔌 GitHub App 集成 - 更强大的集成能力
 
 ## 🚀 安装
 
@@ -38,85 +42,120 @@ go install github.com/elliotxx/osp@latest
 brew tap elliotxx/tap
 brew install osp
 ```
+## 🚀 使用方法
 
-## 使用方法
+### 🖥️ CLI 命令行
 
-### 🖥️ 本地安装使用
-
-1. 登录 GitHub
+1. 配置 GitHub 认证
 ```bash
 # 使用 GitHub CLI 登录
 gh auth login
 
-# 验证 OSP 认证状态
+# 验证认证状态
 osp auth status
 ```
 
-2. 管理仓库
+2. 项目管理
 ```bash
-# 添加仓库
+# 添加项目
 osp repo add owner/repo
 
-# 切换仓库
+# 切换项目
 osp repo
 
-# 查看当前仓库
+# 查看当前项目
 osp repo current
 ```
 
-3. 使用功能
+3. 核心功能
 ```bash
-# 生成项目版本规划
+# 生成版本规划
 osp plan
 
-# 生成项目新手任务
+# 管理新手任务
 osp onboard
 
 # 查看项目统计
 osp stats
 
-# 查看 Star 趋势
+# 分析 Star 趋势
 osp stats star-history
 ```
 
-更多使用说明请参考 [CLI 使用文档](docs/guide/cli.md)。
+更多详细说明请参考 [CLI 使用指南](docs/guide/cli.md)。
 
-### 🤖 GitHub Action 使用
+### 🤖 GitHub Action
 
-> osp-action 的代码仓库见 [osp-action](https://github.com/elliotxx/osp-action)
+> osp-action 实现请查看 [osp-action](https://github.com/elliotxx/osp-action)
 
-1. 在你的仓库中创建 `.github/workflows/osp.yml` 文件：
+下面以通过 osp-action 实现**社区新手任务自动化生成和更新**为例，更多 osp-action 的自动化使用场景请查看 [文档](docs/guide/github-action.md)。
 
+1. 在主分支（main/master）创建工作流配置文件 `.github/workflows/community-task-updater.yml`：
 ```yaml
-TODO
+name: Community Task Updater
+
+on:
+  # Manually triggered
+  workflow_dispatch:
+  # Trigger on issue events
+  issues:
+    types: [opened, edited, deleted, transferred, milestoned, demilestoned, labeled, unlabeled, assigned, unassigned]
+
+jobs:
+  osp-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Community Tasks
+        uses: elliotxx/osp-action@main
+        with:
+          # Optional: version of OSP to use (default: latest)
+          version: 'latest'
+          
+          # Optional: working directory (default: project root)
+          working-directory: '.'
+          
+          # Optional: GitHub token (default: ${{ github.token }})
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: enable debug mode (default: false)
+          debug: false
+          
+          # Optional: skip caching (default: false)
+          skip-cache: false
+          
+          # Optional: additional OSP arguments
+          args: >-
+            onboard
+            --yes
+            --onboard-labels 'help wanted,good first issue'
+            --difficulty-labels 'good first issue,help wanted'
+            --category-labels bug,documentation,enhancement
+            --target-title 'Community tasks | 新手任务清单 🎖︎'
 ```
 
-2. 配置权限
-
-- 进入仓库的 Settings -> Actions -> General
-- 在 "Workflow permissions" 部分，选择 "Read and write permissions"
-- 保存更改
+2. 配置必要权限
+- 导航至 Settings -> Actions -> General
+- 在 "Workflow permissions" 中启用 "Read and write permissions"
+- 保存配置更改
 
 3. 使用方式
-
-- 自动运行：Action 会按照 cron 设置的时间自动运行
-- 手动运行：
-  1. 进入仓库的 Actions 页面
-  2. 选择 "OSP Automation" workflow
+- 自动执行：设定的 Github 事件触发时工作流会自动执行
+- 手动触发：
+  1. 进入 Actions 页面
+  2. 选择 "Community Task Updater"
   3. 点击 "Run workflow"
 
-更多使用说明请参考 [Github Action 使用文档](docs/guide/github-action.md)。
+## 📚 文档
 
-## 文档
+- [使用指南](docs/guide/README.md) - 详细的使用说明
+- [设计文档](docs/design/README.md) - 架构设计与实现
+- [CLI 手册](docs/cli/osp.md) - 命令行工具参考
 
-- [使用指南](docs/guide/README.md) -  使用指南
-- [设计文档](docs/design/README.md) - 架构和实现细节
-- [CLI 参考文档](docs/cli/osp.md) - CLI 参考文档
+## 🤝 贡献
 
-## 贡献
+我们欢迎各种形式的贡献！无论是新功能、文档改进还是 bug 修复。详情请参考[贡献指南](CONTRIBUTING.md)。
 
-欢迎贡献代码和提出建议！请参考我们的[贡献指南](CONTRIBUTING.md)。
+## 📄 许可证
 
-## 许可证
-
-本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。
+本项目采用 MIT 许可证，查看 [LICENSE](LICENSE) 了解详情。
