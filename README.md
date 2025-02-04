@@ -167,6 +167,10 @@ jobs:
 
 We welcome all forms of contributions! Whether it's new features, documentation improvements, or bug fixes. See our [Contributing Guide](CONTRIBUTING.md) for details.
 
+## 👀 Similar Projects
+
+- [Oscar](https://github.com/golang/oscar)
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
