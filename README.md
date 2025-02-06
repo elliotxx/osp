@@ -31,6 +31,8 @@ Actual Example:
 - 💡 Smart Issue Creation - One-line issue generation for improved efficiency
 - 🔌 GitHub App Integration - Enhanced integration capabilities
 - 📝 Release Note Generation - Auto-summarizes core changes, contributors, and community participation metrics
+- Support reading `<!-- CUSTOM -->` tag content from issue will not be overwritten
+- Support display `diff` content before plan and onboard excute
 
 ## 🚀 Installation
 
