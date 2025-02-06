@@ -81,7 +81,7 @@ func DefaultOptions() Options {
 		TargetTitle:   "Planning: {{ .Title }}",
 		Categories:    []string{"bug", "enhancement", "documentation"},
 		Priorities:    []string{"priority/high", "priority/medium", "priority/low"},
-		ExcludePR:     false,
+		ExcludePR:     true,
 		DryRun:        false,
 		AutoConfirm:   false,
 	}

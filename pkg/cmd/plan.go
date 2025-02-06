@@ -79,7 +79,7 @@ Examples:
 
 	// Add flags
 	cmd.Flags().StringVarP(&planningLabel, "target-label", "t", planning.DefaultOptions().PlanningLabel, "Label used to locate the issue where planning content will be updated")
-	cmd.Flags().StringVarP(&targetTitle, "target-title", "T", planning.DefaultOptions().TargetTitle, "Title template of the target issue where planning content will be updated")
+	cmd.Flags().StringVarP(&targetTitle, "target-title", "T", planning.DefaultOptions().TargetTitle, "Title template of the target issue where planning content will be updated. Available fields: .Title, .Description, .Number, .State, .DueOn, .HTMLURL of the milestone")
 	cmd.Flags().StringSliceVarP(&categories, "category-labels", "c", planning.DefaultOptions().Categories, "Labels used to classify issues by type (e.g., 'bug', 'feature')")
 	cmd.Flags().StringSliceVarP(&priorities, "priority-labels", "p", planning.DefaultOptions().Priorities, "Labels used to indicate issue priority, ordered from high to low (e.g., 'priority/high', 'priority/medium')")
 	cmd.Flags().BoolVarP(&excludePR, "exclude-pr", "e", planning.DefaultOptions().ExcludePR, "Exclude pull requests from planning content")
