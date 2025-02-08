@@ -1,99 +1,93 @@
-# 贡献指南
+# Contribution Guide
 
-感谢你考虑为 OSP (Open Source Pilot) 做出贡献！
+Thank you for considering contributing to OSP (Open Source Pilot)!
 
-## 开发流程
+## Development Process
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 开启 Pull Request
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
 
-## 提交规范
+## Commit Guidelines
 
-我们使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
-- `feat`: 新功能
-- `fix`: 修复问题
-- `docs`: 文档修改
-- `style`: 代码格式修改
-- `refactor`: 代码重构
-- `perf`: 性能优化
-- `test`: 测试相关
-- `chore`: 构建过程或辅助工具的变动
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes
+- `refactor`: Code refactoring
+- `perf`: Performance optimization
+- `test`: Test-related changes
+- `chore`: Build process or auxiliary tool changes
 
-示例：
-```
-feat: 添加自动生成周报功能
-fix: 修复认证过期问题
-docs: 更新安装说明
-```
+Examples:
+feat: Add automatic weekly report generation
+fix: Fix expired authentication issue
+docs: Update installation instructions
 
-## 代码风格
+## Code Style
 
-- 使用 `gofmt` 格式化代码
-- 遵循 [Effective Go](https://golang.org/doc/effective_go.html) 建议
-- 添加必要的注释和文档
-- 确保测试覆盖率
+- Use `gofmt` to format code
+- Follow [Effective Go](https://golang.org/doc/effective_go.html) recommendations
+- Add necessary comments and documentation
+- Ensure test coverage
 
-## 开发设置
+## Development Setup
 
-1. 克隆项目
+1. Clone the project
 ```bash
 git clone https://github.com/yourusername/osp.git
-```
 
-2. 安装依赖
+2. Install dependencies
 ```bash
 go mod download
-```
 
-3. 运行测试
+3. Run tests
 ```bash
 go test ./...
-```
 
-4. 构建项目
+4. Build the project
 ```bash
 go build ./cmd/osp
-```
 
-## 提交 PR 前的检查清单
+## Checklist Before Submitting a PR
 
-- [ ] 通过所有测试
-- [ ] 更新相关文档
-- [ ] 添加必要的测试用例
-- [ ] 遵循代码规范
-- [ ] 提交信息符合规范
+- [ ] Pass all tests
+- [ ] Update related documentation
+- [ ] Add necessary test cases
+- [ ] Follow code conventions
+- [ ] Commit message follows guidelines
 
-## 报告问题
+## Reporting Issues
 
-报告问题时，请包含以下信息：
+When reporting issues, please include the following information:
 
-1. 问题描述
-2. 复现步骤
-3. 期望行为
-4. 实际行为
-5. 环境信息
-   - OSP 版本
-   - Go 版本
-   - 操作系统
-   - 其他相关信息
+1. Description of the problem
+2. Reproduction steps
+3. Expected behavior
+4. Actual behavior
+5. Environment information
+   - OSP version
+   - Go version
+   - Operating system
+   - Other relevant information
 
-## 功能建议
+## Feature Suggestions
 
-我们欢迎新功能建议！请在提出建议时：
+We welcome new feature suggestions! Please:
 
-1. 检查现有 issues 避免重复
-2. 详细描述新功能
-3. 说明使用场景
-4. 考虑实现方案
+1. Check existing issues to avoid duplicates
+2. Provide a detailed description of the new feature
+3. Explain use cases
+4. Consider implementation options
 
-## 行为准则
+## Code of Conduct
 
-请参阅我们的 [行为准则](CODE_OF_CONDUCT.md)。
+Please refer to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## 许可证
+## License
 
-通过贡献代码，你同意将代码以 [MIT 许可证](LICENSE) 授权。
+By contributing code, you agree to license it under the [MIT License](LICENSE).
