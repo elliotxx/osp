@@ -36,6 +36,7 @@ Actual Example:
 - Add descriptions for each label in `plan` and `onboard` templates
 - Support recent activity (latest finish issue, etc) in `plan` and `onboard` templates, such as showing recently closed issues
 - Add explanation for difficulty symbol `!` in `osp plan` template
+- Integration with [all-contributors](https://allcontributors.org/)
 
 ## 🚀 Installation
 
