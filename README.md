@@ -34,7 +34,7 @@ Actual Example:
 - Support reading `<!-- CUSTOM -->` tag content from issue will not be overwritten
 - Support display `diff` content before plan and onboard excute
 - Add descriptions for each label in `plan` and `onboard` templates
-- Support recent activity in `plan` and `onboard` templates, such as showing recently closed issues
+- Support recent activity (latest finish issue, etc) in `plan` and `onboard` templates, such as showing recently closed issues
 - Add explanation for difficulty symbol `!` in `osp plan` template
 
 ## 🚀 Installation
